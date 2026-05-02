@@ -2,56 +2,81 @@
 
 ![Mig Logo](docs/Logo.png)
 
-Mig – Your simple, language-agnostic, migration management tool!
+> Your simple, language-agnostic, migration management tool!
 
-## Features
-- **Language Agnostic:** Currently supports SQL, with plans for YAML, JSON, and more.
-- **Multi-Driver Support:** Built-in support for **PostgreSQL**, **MySQL**, and **SQLite**.
-- **Easy Workflow:** Simple `setup`, `create`, `migrate`, `rollback`, `reset`, `fresh`, `refresh`, and `status` commands.
-- **Configurable:** Driven by `mig.yml` and environment variables.
+[![Build Status](https://img.shields.io/github/actions/workflow/status/mig-tool/mig/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/mig-tool/mig/actions)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/mig-tool/mig/tests.yml?branch=main&label=Tests&style=flat-square)](https://github.com/mig-tool/mig/actions)
+![License](https://img.shields.io/github/license/mig-tool/mig?style=flat-square)
+![Language](https://img.shields.io/badge/language-Go-blue?style=flat-square)
 
-## Getting Started
+---
 
-1. **Initialize your project:**
-   ```bash
-   mig setup
-   ```
-   Follow the interactive prompts or use flags (`--driver`, `--dbname`, `--dir`).
+## 🚀 Why Mig?
+Stop wrestling with complex migration tools. **Mig** gives you a streamlined, driver-based approach to managing your database schema, no matter the language you use. 
 
-2. **Create a new migration:**
-   ```bash
-   mig create create_users_table
-   ```
-   Generates `YYYY_MM_DD_HHMMSS_create_users_table.sql`.
+### ✨ Key Features
+- **Language Agnostic:** Currently supports SQL with a robust, directive-based parser (`+migrate Up`/`Down`).
+- **Driver-First:** First-class support for **PostgreSQL**, **MySQL**, and **SQLite**.
+- **Dev-Friendly:** Interactive `setup` with sensible defaults.
+- **Advanced Control:** Selective rollback (`--steps`), specific file targeting (`--migration`), and safe `fresh`/`refresh` cycles.
 
-3. **Run migrations:**
-   ```bash
-   mig migrate
-   ```
+---
 
-4. **Rollback migrations:**
-   ```bash
-   # Rollback 1 step (default)
-   mig rollback
-   
-   # Rollback 2 steps
-   mig rollback --steps=2
-   
-   # Rollback specific migration
-   mig rollback --migration=create_users_table
-   ```
+## 📋 Table of Contents
+- [Getting Started](#-getting-started)
+- [Usage](#-usage)
+- [Configuration](#-configuration)
+- [Architecture](#-architecture)
 
-5. **Reset and Refresh:**
-   ```bash
-   mig reset      # Rollback all
-   mig fresh      # Reset and migrate
-   mig refresh    # Alias for fresh
-   ```
+---
 
-6. **Status:**
-   ```bash
-   mig status
-   ```
+## 🏁 Getting Started
 
-## Configuration
-Configure your database in `mig.yml` or use environment variables like `MIG_DB_DRIVER`.
+### Quick Start
+```bash
+# 1. Setup your project (interactive)
+mig setup
+
+# 2. Create your first migration
+mig create add_users_table
+
+# 3. Apply changes!
+mig migrate
+```
+
+---
+
+## 🛠 Usage
+
+| Command | Description |
+| :--- | :--- |
+| `setup` | Initialize the project (or run for config-check) |
+| `create` | Generate a new timestamped migration |
+| `migrate` | Run all pending migrations |
+| `rollback` | Reverse migrations (--steps, --migration) |
+| `reset` | Rollback *all* applied migrations |
+| `fresh` | Reset the DB and re-run all migrations |
+| `status` | View applied/pending migration list |
+
+---
+
+## ⚙️ Configuration
+Configure your database in `mig.yml` or use environment variables:
+
+```yaml
+database:
+  driver: sqlite
+  dbname: database.db
+migrations:
+  parser: sql
+  dir: migrations
+```
+
+---
+
+## 🏗 Architecture
+Mig utilizes a modular architecture based on **Drivers** (DB connection) and **Parsers** (file format handling). Check out [ARCHITECTURE.md](ARCHITECTURE.md) for a deep dive and visual diagrams.
+
+---
+
+Made with ❤️ by the Mig team.
