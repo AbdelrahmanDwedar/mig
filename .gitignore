@@ -21,3 +21,6 @@ migrations/
 # Binary artifacts from builds
 bin/
 dist/
+
+# Testing files
+mig.yml
