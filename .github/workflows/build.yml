@@ -16,7 +16,7 @@ jobs:
       - name: Build
         run: go build -v ./cmd/mig/...
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mig-binary
           path: mig
