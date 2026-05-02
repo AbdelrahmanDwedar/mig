@@ -61,12 +61,12 @@ mig migrate
 ---
 
 ## ⚙️ Configuration
-Configure your database in `mig.yml` or use environment variables:
+Configure your database in `mig.yml`. You can use environment variables directly using `${VAR_NAME}` syntax:
 
 ```yaml
 database:
-  driver: sqlite
-  dbname: database.db
+  driver: ${DB_DRIVER}
+  dbname: ${DB_NAME}
 migrations:
   parser: sql
   dir: migrations
