@@ -67,15 +67,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Cloudsmith push (Commented out until CLOUDSMITH_API_KEY is configured)
-      # - name: Push to Cloudsmith
-      #   uses: cloudsmith-io/action@master
-      #   with:
-      #     api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
-      #     command: push
-      #     format: deb
-      #     owner: AbdelrahmanDwedar
-      #     repo: stable
-      #     distro: ubuntu
-      #     release: any
-      #     file: dist/*.deb
+      - name: Push to Cloudsmith
+        uses: cloudsmith-io/action@master
+        with:
+          api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
+          command: push
+          format: deb
+          owner: AbdelrahmanDwedar
+          repo: stable
+          distro: ubuntu
+          release: any
+          file: dist/*.deb
+
+      - name: Push RPM to Cloudsmith
+        uses: cloudsmith-io/action@master
+        with:
+          api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
+          command: push
+          format: rpm
+          owner: AbdelrahmanDwedar
+          repo: stable
+          distro: fedora
+          release: any
+          file: dist/*.rpm
