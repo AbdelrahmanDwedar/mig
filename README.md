@@ -6,7 +6,7 @@
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/AbdelrahmanDwedar/mig/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/AbdelrahmanDwedar/mig/actions)
 [![Test Status](https://img.shields.io/github/actions/workflow/status/AbdelrahmanDwedar/mig/tests.yml?branch=main&label=Tests&style=flat-square)](https://github.com/AbdelrahmanDwedar/mig/actions)
-![License](https://img.shields.io/github/license/AbdelrahmanDwedar/mig?style=flat-square)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](https://github.com/AbdelrahmanDwedar/mig/blob/main/LICENSE)
 ![Language](https://img.shields.io/badge/language-Go-blue?style=flat-square)
 
 ---
