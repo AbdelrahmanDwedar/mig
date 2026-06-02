@@ -2,7 +2,10 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 
+	"github.com/compose-spec/compose-go/v2/template"
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,13 +29,28 @@ type Config struct {
 }
 
 func LoadConfig(path string) (*Config, error) {
+	// 1. Try to locate project root and load .env
+	rootDir := findProjectRoot(path)
+	if rootDir != "" {
+		_ = godotenv.Load(filepath.Join(rootDir, ".env"))
+	} else {
+		_ = godotenv.Load() // Fallback to local .env
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	// Expand environment variables (e.g., ${DB_NAME})
-	expandedData := os.ExpandEnv(string(data))
+	// 2. Expand environment variables
+	mapping := func(s string) (string, bool) {
+		return os.LookupEnv(s)
+	}
+
+	expandedData, err := template.Substitute(string(data), mapping)
+	if err != nil {
+		return nil, err
+	}
 
 	var cfg Config
 	if err := yaml.Unmarshal([]byte(expandedData), &cfg); err != nil {
@@ -40,4 +58,23 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func findProjectRoot(configPath string) string {
+	absPath, err := filepath.Abs(configPath)
+	if err != nil {
+		return ""
+	}
+	dir := filepath.Dir(absPath)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
 }

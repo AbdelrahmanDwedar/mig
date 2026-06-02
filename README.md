@@ -61,12 +61,21 @@ mig migrate
 ---
 
 ## ⚙️ Configuration
-Configure your database in `mig.yml`. You can use environment variables directly using `${VAR_NAME}` syntax:
+Configure your database in `mig.yml`. Mig supports advanced Docker Compose-style environment variable interpolation:
 
+- **Basic**: `${VAR_NAME}`
+- **Default values**: `${VAR_NAME:-default_value}` (uses `default_value` if `VAR_NAME` is unset or empty)
+- **Mandatory variables**: `${VAR_NAME:?error_message}` (exits with `error_message` if `VAR_NAME` is unset or empty)
+
+Example `mig.yml`:
 ```yaml
 database:
-  driver: ${DB_DRIVER}
-  dbname: ${DB_NAME}
+  driver: ${DB_DRIVER:-mysql}
+  host: ${DB_HOST:-localhost}
+  port: ${DB_PORT:-3306}
+  user: ${DB_USER:-root}
+  password: ${DB_PASSWORD:?database password is required}
+  dbname: ${DB_NAME:-mydatabase}
 migrations:
   parser: sql
   dir: migrations
