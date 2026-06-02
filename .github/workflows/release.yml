@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install nfpm
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install nfpm
+
+      - name: Build and Package
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # Clean version string (remove 'v' prefix if present)
+          CLEAN_VERSION=$(echo ${VERSION} | sed 's/^v//')
+          export VERSION=${CLEAN_VERSION}
+
+          # Build for amd64
+          GOOS=linux GOARCH=amd64 go build -o dist/amd64/mig ./cmd/mig
+          
+          # Package amd64
+          cp dist/amd64/mig .
+          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_amd64.deb
+          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_amd64.rpm
+          
+          # Build for arm64
+          GOOS=linux GOARCH=arm64 go build -o dist/arm64/mig ./cmd/mig
+          
+          # Package arm64
+          cp dist/arm64/mig .
+          sed -i 's/arch: "amd64"/arch: "arm64"/' nfpm.yaml
+          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_arm64.deb
+          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_arm64.rpm
+          
+          # Revert nfpm.yaml arch for safety
+          sed -i 's/arch: "arm64"/arch: "amd64"/' nfpm.yaml
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.deb
+            dist/*.rpm
+            dist/amd64/mig
+            dist/arm64/mig
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Cloudsmith push (Commented out until CLOUDSMITH_API_KEY is configured)
+      # - name: Push to Cloudsmith
+      #   uses: cloudsmith-io/action@master
+      #   with:
+      #     api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
+      #     command: push
+      #     format: deb
+      #     owner: mig-tool
+      #     repo: stable
+      #     distro: ubuntu
+      #     release: any
+      #     file: dist/*.deb
