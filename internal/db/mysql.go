@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/mig-tool/mig/internal/config"
+	"github.com/AbdelrahmanDwedar/mig/internal/config"
 )
 
 type MySQLDriver struct {

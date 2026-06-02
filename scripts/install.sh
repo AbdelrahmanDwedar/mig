@@ -3,9 +3,9 @@
 set -e
 
 # Repository information
-OWNER="mig-tool"
+OWNER="AbdelrahmanDwedar"
 REPO="mig"
-CLOUDSMITH_REPO="mig-tool/stable"
+CLOUDSMITH_REPO="AbdelrahmanDwedar/stable"
 
 # Colors
 RED='\033[0;31m'

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mig-tool/mig/internal/config"
+	"github.com/AbdelrahmanDwedar/mig/internal/config"
 )
 
 func TestLoadConfig(t *testing.T) {

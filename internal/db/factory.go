@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"github.com/mig-tool/mig/internal/config"
+	"github.com/AbdelrahmanDwedar/mig/internal/config"
 )
 
 func NewDriver(cfg *config.DatabaseConfig) (Driver, error) {

@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/manifoldco/promptui"
-	"github.com/mig-tool/mig/internal/config"
-	"github.com/mig-tool/mig/internal/db"
-	"github.com/mig-tool/mig/internal/migrate"
-	"github.com/mig-tool/mig/internal/parser"
+	"github.com/AbdelrahmanDwedar/mig/internal/config"
+	"github.com/AbdelrahmanDwedar/mig/internal/db"
+	"github.com/AbdelrahmanDwedar/mig/internal/migrate"
+	"github.com/AbdelrahmanDwedar/mig/internal/parser"
 	"github.com/spf13/cobra"
 )
 

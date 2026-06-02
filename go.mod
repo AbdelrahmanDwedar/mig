@@ -1,4 +1,4 @@
-module github.com/mig-tool/mig
+module github.com/AbdelrahmanDwedar/mig
 
 go 1.24.10
 

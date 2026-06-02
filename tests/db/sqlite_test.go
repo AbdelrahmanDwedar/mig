@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mig-tool/mig/internal/config"
-	"github.com/mig-tool/mig/internal/db"
+	"github.com/AbdelrahmanDwedar/mig/internal/config"
+	"github.com/AbdelrahmanDwedar/mig/internal/db"
 )
 
 func TestSQLiteDriver_Integration(t *testing.T) {

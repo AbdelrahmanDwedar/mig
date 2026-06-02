@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mig-tool/mig/internal/db"
-	"github.com/mig-tool/mig/internal/migrate"
-	"github.com/mig-tool/mig/internal/parser"
+	"github.com/AbdelrahmanDwedar/mig/internal/db"
+	"github.com/AbdelrahmanDwedar/mig/internal/migrate"
+	"github.com/AbdelrahmanDwedar/mig/internal/parser"
 )
 
 func TestMigrator_Flow(t *testing.T) {

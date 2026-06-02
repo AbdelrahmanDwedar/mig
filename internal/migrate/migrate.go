@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mig-tool/mig/internal/db"
-	"github.com/mig-tool/mig/internal/parser"
+	"github.com/AbdelrahmanDwedar/mig/internal/db"
+	"github.com/AbdelrahmanDwedar/mig/internal/parser"
 )
 
 type Migrator struct {

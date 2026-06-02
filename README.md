@@ -4,9 +4,9 @@
 
 > Your simple, language-agnostic, migration management tool!
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/mig-tool/mig/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/mig-tool/mig/actions)
-[![Test Status](https://img.shields.io/github/actions/workflow/status/mig-tool/mig/tests.yml?branch=main&label=Tests&style=flat-square)](https://github.com/mig-tool/mig/actions)
-![License](https://img.shields.io/github/license/mig-tool/mig?style=flat-square)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/AbdelrahmanDwedar/mig/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/AbdelrahmanDwedar/mig/actions)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/AbdelrahmanDwedar/mig/tests.yml?branch=main&label=Tests&style=flat-square)](https://github.com/AbdelrahmanDwedar/mig/actions)
+![License](https://img.shields.io/github/license/AbdelrahmanDwedar/mig?style=flat-square)
 ![Language](https://img.shields.io/badge/language-Go-blue?style=flat-square)
 
 ---
@@ -37,7 +37,7 @@ Stop wrestling with complex migration tools. **Mig** gives you a streamlined, dr
 The easiest way to install Mig is via our universal installation script:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/mig-tool/mig/main/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/AbdelrahmanDwedar/mig/main/scripts/install.sh | bash
 ```
 
 ### Package Managers
@@ -45,18 +45,18 @@ If you prefer using your system's package manager, you can install Mig via **apt
 
 #### Debian / Ubuntu
 ```bash
-curl -1sLf 'https://dl.cloudsmith.io/public/mig-tool/stable/setup.deb.sh' | sudo -E bash
+curl -1sLf 'https://dl.cloudsmith.io/public/AbdelrahmanDwedar/stable/setup.deb.sh' | sudo -E bash
 sudo apt install mig
 ```
 
 #### Fedora / CentOS / RHEL
 ```bash
-curl -1sLf 'https://dl.cloudsmith.io/public/mig-tool/stable/setup.rpm.sh' | sudo -E bash
+curl -1sLf 'https://dl.cloudsmith.io/public/AbdelrahmanDwedar/stable/setup.rpm.sh' | sudo -E bash
 sudo dnf install mig
 ```
 
 ### Manual Installation
-You can also download the pre-compiled binaries directly from our [Releases](https://github.com/mig-tool/mig/releases) page.
+You can also download the pre-compiled binaries directly from our [Releases](https://github.com/AbdelrahmanDwedar/mig/releases) page.
 
 ---
 

@@ -3,7 +3,7 @@ package parser_test
 import (
 	"testing"
 
-	"github.com/mig-tool/mig/internal/parser"
+	"github.com/AbdelrahmanDwedar/mig/internal/parser"
 )
 
 func TestSQLParser_Parse(t *testing.T) {
