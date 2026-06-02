@@ -79,15 +79,15 @@ jobs:
 
       - name: Push to Cloudsmith
         run: |
-          # Try lowercase owner name which is standard for Cloudsmith slugs
+          # Use any-distro/any-version for universal Go binaries
           OWNER="abdelrahmandwedar"
           
           # Push DEB packages
           for file in dist/*.deb; do
-            cloudsmith push deb ${OWNER}/stable/ubuntu/any "$file"
+            cloudsmith push deb ${OWNER}/stable/any-distro/any-version "$file"
           done
           
           # Push RPM packages
           for file in dist/*.rpm; do
-            cloudsmith push rpm ${OWNER}/stable/fedora/any "$file"
+            cloudsmith push rpm ${OWNER}/stable/any-distro/any-version "$file"
           done
