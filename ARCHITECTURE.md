@@ -68,6 +68,12 @@ sequenceDiagram
 - **`internal/migrate`**: Orchestrates migration lifecycle (migrate, rollback, reset, status).
 - **`internal/parser`**: Handles migration file parsing (via `Parser` interface).
 
+## Deployment Pipeline
+Mig uses a custom CI/CD pipeline built with GitHub Actions and **nfpm**:
+1. **Cross-Compilation**: Binaries are built for multiple architectures (amd64, arm64).
+2. **Native Packaging**: `nfpm` generates `.deb` and `.rpm` packages.
+3. **Distribution**: Packages are pushed to **Cloudsmith** for native package manager support (`apt`/`dnf`) and uploaded to GitHub Releases.
+
 ## Database Tracking
 Migrations are tracked via an `_migrations` table in the target database with:
 - `uuid` (Primary Key, auto-generated)

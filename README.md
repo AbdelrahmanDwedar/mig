@@ -23,10 +23,40 @@ Stop wrestling with complex migration tools. **Mig** gives you a streamlined, dr
 ---
 
 ## 📋 Table of Contents
+- [Installation](#-installation)
 - [Getting Started](#-getting-started)
 - [Usage](#-usage)
 - [Configuration](#-configuration)
 - [Architecture](#-architecture)
+
+---
+
+## 📦 Installation
+
+### Universal Installer (Linux)
+The easiest way to install Mig is via our universal installation script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/mig-tool/mig/main/scripts/install.sh | bash
+```
+
+### Package Managers
+If you prefer using your system's package manager, you can install Mig via **apt** or **dnf** after setting up our repository:
+
+#### Debian / Ubuntu
+```bash
+curl -1sLf 'https://dl.cloudsmith.io/public/mig-tool/stable/setup.deb.sh' | sudo -E bash
+sudo apt install mig
+```
+
+#### Fedora / CentOS / RHEL
+```bash
+curl -1sLf 'https://dl.cloudsmith.io/public/mig-tool/stable/setup.rpm.sh' | sudo -E bash
+sudo dnf install mig
+```
+
+### Manual Installation
+You can also download the pre-compiled binaries directly from our [Releases](https://github.com/mig-tool/mig/releases) page.
 
 ---
 
