@@ -36,12 +36,20 @@ fi
 install_via_repo() {
     echo -e "${GREEN}Setting up Cloudsmith repository...${NC}"
     if [ "$PM" == "apt" ]; then
-        curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.deb.sh" | sudo -E bash
-        sudo apt-get install -y mig
+        curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.deb.sh" | sudo -E bash || return 1
+        sudo apt-get update
+        sudo apt-get install -y mig || return 1
     elif [ "$PM" == "dnf" ] || [ "$PM" == "yum" ]; then
-        curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash
-        sudo $PM install -y mig
+        curl -1sLf "https://dl.cloudsmith.io/public/${CLOUDSMITH_REPO}/setup.rpm.sh" | sudo -E bash || return 1
+        sudo $PM install -y mig || return 1
     fi
+    
+    # Verify installation
+    if ! command -v mig >/dev/null; then
+        echo -e "${RED}Error: mig command not found after installation.${NC}"
+        return 1
+    fi
+    
     echo -e "${GREEN}Mig installed successfully via $PM!${NC}"
 }
 
