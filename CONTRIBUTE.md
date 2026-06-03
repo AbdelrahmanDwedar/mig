@@ -46,9 +46,9 @@ Format: `type: {description}` or `type(scope): {description}`
 - `chore`: Changes to the build process or auxiliary tools and libraries
 
 **Examples**:
-- `feat: add CockroachDB driver`
+- `feat(driver): add CockroachDB driver`
 - `fix(parser): handle trailing semicolons correctly`
-- `docs: update installation instructions`
+- `docs(readme): update installation instructions`
 - `docs(readme): add Cloudsmith repository setup`
 - `test: add unit tests for environment interpolation`
 - `chore: update github action permissions`
