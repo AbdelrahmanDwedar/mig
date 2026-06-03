@@ -2,9 +2,9 @@ package db
 
 import (
 	"database/sql"
+	"github.com/AbdelrahmanDwedar/mig/internal/config"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/AbdelrahmanDwedar/mig/internal/config"
 )
 
 type SQLiteDriver struct {

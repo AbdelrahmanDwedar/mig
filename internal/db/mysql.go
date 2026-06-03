@@ -3,9 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/AbdelrahmanDwedar/mig/internal/config"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 )
 
 type MySQLDriver struct {
