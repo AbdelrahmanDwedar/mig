@@ -32,6 +32,29 @@ We use a prefix-based naming convention for branches. Always create a new branch
 
 ---
 
+## 💬 Commit Message Convention
+
+We follow a structured commit message format (Conventional Commits). This helps us generate clean changelogs and maintain a readable history.
+
+Format: `type: {description}` or `type(scope): {description}`
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `test`: Adding missing tests or correcting existing tests
+- `chore`: Changes to the build process or auxiliary tools and libraries
+
+**Examples**:
+- `feat: add CockroachDB driver`
+- `fix(parser): handle trailing semicolons correctly`
+- `docs: update installation instructions`
+- `docs(readme): add Cloudsmith repository setup`
+- `test: add unit tests for environment interpolation`
+- `chore: update github action permissions`
+
+---
+
 ## 🧪 Testing Requirements
 
 - **New Tests**: Every feature or bug fix **must** include corresponding unit tests.
