@@ -5,11 +5,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/manifoldco/promptui"
 	"github.com/AbdelrahmanDwedar/mig/internal/config"
 	"github.com/AbdelrahmanDwedar/mig/internal/db"
 	"github.com/AbdelrahmanDwedar/mig/internal/migrate"
 	"github.com/AbdelrahmanDwedar/mig/internal/parser"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
@@ -322,7 +322,7 @@ Note: These flags are mutually exclusive.`,
 				dir = cfg.Migrations.Dir
 			}
 			migrator := &migrate.Migrator{Driver: driver, Parser: p, Dir: dir}
-			
+
 			if err := migrator.Reset(); err != nil {
 				return err
 			}

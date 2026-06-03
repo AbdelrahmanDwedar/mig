@@ -3,8 +3,8 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"github.com/AbdelrahmanDwedar/mig/internal/config"
+	_ "github.com/lib/pq"
 )
 
 type PostgresDriver struct {
@@ -63,7 +63,6 @@ func (d *PostgresDriver) ApplyMigration(name, upSQL string) error {
 	}
 	return tx.Commit()
 }
-
 
 func (d *PostgresDriver) RollbackMigration(name, downSQL string) error {
 	tx, err := d.db.Begin()

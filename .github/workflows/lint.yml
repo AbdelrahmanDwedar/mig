@@ -1,4 +1,4 @@
-name: Tests
+name: Lint
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ dev ]
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,5 +15,5 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-      - name: Test
-        run: go test -v ./tests/...
+      - name: Run Go Vet
+        run: go vet ./...

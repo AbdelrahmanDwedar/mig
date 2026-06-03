@@ -8,8 +8,8 @@ type MockDriver struct {
 	AppliedMigrations []string
 }
 
-func (m *MockDriver) Connect() error              { return nil }
-func (m *MockDriver) Close() error                { return nil }
+func (m *MockDriver) Connect() error               { return nil }
+func (m *MockDriver) Close() error                 { return nil }
 func (m *MockDriver) EnsureMigrationsTable() error { return nil }
 func (m *MockDriver) GetAppliedMigrations() ([]string, error) {
 	return m.AppliedMigrations, nil
