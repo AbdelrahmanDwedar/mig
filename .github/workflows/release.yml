@@ -1,93 +1,82 @@
-name: Release
+name: Auto Semantic Versioning
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 jobs:
-  build:
-    name: Build and Package
+  bump-version:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-
-      - name: Install nfpm
+      - name: Get latest tag
+        id: get-latest-tag
         run: |
-          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
-          sudo apt-get update
-          sudo apt-get install nfpm
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
 
-      - name: Build and Package
-        env:
-          VERSION: ${{ github.ref_name }}
+      - name: Determine version bump
+        id: determine-bump
         run: |
-          # Clean version string (remove 'v' prefix if present)
-          CLEAN_VERSION=$(echo ${VERSION} | sed 's/^v//')
-          export VERSION=${CLEAN_VERSION}
-
-          # Build for amd64
-          GOOS=linux GOARCH=amd64 go build -o dist/amd64/mig ./cmd/mig
+          latest_tag="${{ steps.get-latest-tag.outputs.latest_tag }}"
           
-          # Package amd64
-          cp dist/amd64/mig .
-          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_amd64.deb
-          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_amd64.rpm
+          # Get commits since latest tag
+          commits=$(git log $latest_tag..HEAD --pretty=format:"%s")
           
-          # Build for arm64
-          GOOS=linux GOARCH=arm64 go build -o dist/arm64/mig ./cmd/mig
+          bump="patch" # Default to patch
           
-          # Package arm64
-          cp dist/arm64/mig .
-          sed -i 's/arch: "amd64"/arch: "arm64"/' nfpm.yaml
-          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_arm64.deb
-          VERSION=${CLEAN_VERSION} nfpm pkg --target dist/mig_${CLEAN_VERSION}_arm64.rpm
+          while IFS= read -r commit; do
+            if [[ "$commit" == *"!"* ]]; then
+              bump="major"
+              break
+            elif [[ "$commit" == feat* ]]; then
+              if [[ "$bump" != "major" ]]; then
+                bump="minor"
+              fi
+            fi
+          done <<< "$commits"
           
-          # Revert nfpm.yaml arch for safety
-          sed -i 's/arch: "arm64"/arch: "amd64"/' nfpm.yaml
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/*.deb
-            dist/*.rpm
-            dist/amd64/mig
-            dist/arm64/mig
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Cloudsmith CLI
-        uses: cloudsmith-io/cloudsmith-cli-action@v2
-        with:
-          api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
-
-      - name: Check Cloudsmith Status
+          echo "bump=$bump" >> $GITHUB_OUTPUT
+          
+      - name: Calculate new version
+        id: calc-version
         run: |
-          cloudsmith whoami
-          cloudsmith list repos abdelrahmandwedar || echo "Could not list repos for lowercase name"
+          latest_tag="${{ steps.get-latest-tag.outputs.latest_tag }}"
+          bump="${{ steps.determine-bump.outputs.bump }}"
+          
+          # Remove 'v' prefix
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+          
+          case $bump in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+          
+          new_version="v$major.$minor.$patch"
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo "Current: $latest_tag, New: $new_version, Bump: $bump"
 
-      - name: Push to Cloudsmith
+      - name: Create tag
         run: |
-          # Use any-distro/any-version for universal Go binaries
-          OWNER="abdelrahmandwedar"
-          
-          # Push DEB packages
-          for file in dist/*.deb; do
-            cloudsmith push deb ${OWNER}/stable/any-distro/any-version "$file"
-          done
-          
-          # Push RPM packages
-          for file in dist/*.rpm; do
-            cloudsmith push rpm ${OWNER}/stable/any-distro/any-version "$file"
-          done
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.calc-version.outputs.new_version }}"
+          git push origin "${{ steps.calc-version.outputs.new_version }}"
