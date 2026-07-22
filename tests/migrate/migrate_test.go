@@ -29,16 +29,24 @@ func TestMigrator_Flow(t *testing.T) {
 	}
 
 	// Test Migrate
-	if err := migrator.Migrate(); err != nil {
+	applied, err := migrator.Migrate()
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(applied) != 1 || applied[0] != mName {
+		t.Error("Migrate did not return the applied migration name")
 	}
 	if len(driver.AppliedMigrations) != 1 || driver.AppliedMigrations[0] != mName {
 		t.Error("Migration not applied correctly")
 	}
 
 	// Test Rollback
-	if err := migrator.Rollback(1, ""); err != nil {
+	rolledBack, err := migrator.Rollback(1, "")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(rolledBack) != 1 || rolledBack[0] != mName {
+		t.Error("Rollback did not return the rolled back migration name")
 	}
 	if len(driver.AppliedMigrations) != 0 {
 		t.Error("Rollback failed")
