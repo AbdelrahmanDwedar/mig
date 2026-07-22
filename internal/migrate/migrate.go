@@ -17,19 +17,19 @@ type Migrator struct {
 	Dir    string
 }
 
-func (m *Migrator) Migrate() error {
+func (m *Migrator) Migrate() ([]string, error) {
 	if err := m.Driver.EnsureMigrationsTable(); err != nil {
-		return err
+		return nil, err
 	}
 
 	applied, err := m.Driver.GetAppliedMigrations()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	files, err := os.ReadDir(m.Dir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var pending []string
@@ -49,30 +49,31 @@ func (m *Migrator) Migrate() error {
 	}
 	sort.Strings(pending)
 
+	var appliedNow []string
 	for _, name := range pending {
-		fmt.Printf("Applying migration: %s\n", name)
 		content, err := os.ReadFile(filepath.Join(m.Dir, name))
 		if err != nil {
-			return err
+			return appliedNow, err
 		}
 		up, _, err := m.Parser.Parse(string(content))
 		if err != nil {
-			return err
+			return appliedNow, err
 		}
 		if err := m.Driver.ApplyMigration(name, up); err != nil {
-			return err
+			return appliedNow, err
 		}
+		appliedNow = append(appliedNow, name)
 	}
-	return nil
+	return appliedNow, nil
 }
 
-func (m *Migrator) Rollback(steps int, migrationPath string) error {
+func (m *Migrator) Rollback(steps int, migrationPath string) ([]string, error) {
 	applied, err := m.Driver.GetAppliedMigrations()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(applied) == 0 {
-		return fmt.Errorf("no migrations to rollback")
+		return nil, fmt.Errorf("no migrations to rollback")
 	}
 	sort.Strings(applied)
 
@@ -87,7 +88,7 @@ func (m *Migrator) Rollback(steps int, migrationPath string) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("migration not found or not applied: %s", migrationPath)
+			return nil, fmt.Errorf("migration not found or not applied: %s", migrationPath)
 		}
 	} else {
 		if steps <= 0 {
@@ -101,47 +102,49 @@ func (m *Migrator) Rollback(steps int, migrationPath string) error {
 		}
 	}
 
+	var rolledBack []string
 	for _, name := range targets {
 		content, err := os.ReadFile(filepath.Join(m.Dir, name))
 		if err != nil {
-			return err
+			return rolledBack, err
 		}
 
 		_, down, err := m.Parser.Parse(string(content))
 		if err != nil {
-			return err
+			return rolledBack, err
 		}
 
-		fmt.Printf("Rolling back migration: %s\n", name)
 		if err := m.Driver.RollbackMigration(name, down); err != nil {
-			return err
+			return rolledBack, err
 		}
+		rolledBack = append(rolledBack, name)
 	}
-	return nil
+	return rolledBack, nil
 }
 
-func (m *Migrator) Reset() error {
+func (m *Migrator) Reset() ([]string, error) {
 	applied, err := m.Driver.GetAppliedMigrations()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sort.Strings(applied)
+	var rolledBack []string
 	for i := len(applied) - 1; i >= 0; i-- {
 		name := applied[i]
 		content, err := os.ReadFile(filepath.Join(m.Dir, name))
 		if err != nil {
-			return err
+			return rolledBack, err
 		}
 		_, down, err := m.Parser.Parse(string(content))
 		if err != nil {
-			return err
+			return rolledBack, err
 		}
-		fmt.Printf("Rolling back migration: %s\n", name)
 		if err := m.Driver.RollbackMigration(name, down); err != nil {
-			return err
+			return rolledBack, err
 		}
+		rolledBack = append(rolledBack, name)
 	}
-	return nil
+	return rolledBack, nil
 }
 
 func (m *Migrator) Status() ([]map[string]string, error) {
