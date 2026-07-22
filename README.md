@@ -90,6 +90,8 @@ mig migrate
 
 ---
 
+Every command accepts a global `--json` flag, printing a single `{"success", "data", "error"}` line to stdout instead of prose — useful for scripts and AI agents driving `mig` programmatically.
+
 ## ⚙️ Configuration
 Configure your database in `mig.yml`. Mig supports advanced Docker Compose-style environment variable interpolation:
 
