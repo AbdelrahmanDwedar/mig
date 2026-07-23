@@ -27,6 +27,7 @@ Stop wrestling with complex migration tools. **Mig** gives you a streamlined, dr
 - [Getting Started](#-getting-started)
 - [Usage](#-usage)
 - [Configuration](#-configuration)
+- [AI Agent Support](#-ai-agent-support)
 - [Architecture](#-architecture)
 
 ---
@@ -107,6 +108,22 @@ mig migrate
 ---
 
 Every command accepts a global `--json` flag, printing a single `{"success", "data", "error"}` line to stdout instead of prose — useful for scripts and AI agents driving `mig` programmatically.
+
+---
+
+## 🤖 AI Agent Support
+Mig ships with an agent-facing skill doc: **[docs/AGENT_SKILL.md](docs/AGENT_SKILL.md)**. It documents `--json` output shapes, non-interactive `setup` flags, parser quirks, and other gotchas an agent needs to drive `mig` correctly without trial and error.
+
+To use it with **Claude Code**, copy it into a skill directory so Claude can discover and load it automatically:
+
+```bash
+mkdir -p ~/.claude/skills/mig
+cp docs/AGENT_SKILL.md ~/.claude/skills/mig/SKILL.md
+```
+
+(Use `.claude/skills/mig/SKILL.md` inside a specific project instead of `~/.claude/skills` to scope it to that project.)
+
+For other agents (Cursor, Copilot, etc.), just point them at `docs/AGENT_SKILL.md` or paste its contents into your agent's context/rules file — it's plain Markdown with no Claude-specific dependencies.
 
 ## ⚙️ Configuration
 Configure your database in `mig.yml`. Mig supports advanced Docker Compose-style environment variable interpolation:
