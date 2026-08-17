@@ -14,7 +14,7 @@ type MySQLDriver struct {
 }
 
 func (d *MySQLDriver) Connect() error {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?multiStatements=true",
 		d.config.User, d.config.Password, d.config.Host, d.config.Port, d.config.DBName)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {

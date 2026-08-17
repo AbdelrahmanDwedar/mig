@@ -12,9 +12,9 @@ import (
 )
 
 type Migrator struct {
-	Driver db.Driver
-	Parser parser.Parser
-	Dir    string
+	Driver   db.Driver
+	Registry *parser.Registry
+	Dir      string
 }
 
 func (m *Migrator) Migrate() ([]string, error) {
@@ -34,7 +34,7 @@ func (m *Migrator) Migrate() ([]string, error) {
 
 	var pending []string
 	for _, f := range files {
-		if !f.IsDir() && strings.HasSuffix(f.Name(), ".sql") {
+		if !f.IsDir() && m.Registry.IsMigrationFile(f.Name()) {
 			isApplied := false
 			for _, a := range applied {
 				if a == f.Name() {
@@ -55,7 +55,11 @@ func (m *Migrator) Migrate() ([]string, error) {
 		if err != nil {
 			return appliedNow, err
 		}
-		up, _, err := m.Parser.Parse(string(content))
+		p, err := m.Registry.For(name)
+		if err != nil {
+			return appliedNow, err
+		}
+		up, _, err := p.Parse(string(content))
 		if err != nil {
 			return appliedNow, err
 		}
@@ -109,7 +113,11 @@ func (m *Migrator) Rollback(steps int, migrationPath string) ([]string, error) {
 			return rolledBack, err
 		}
 
-		_, down, err := m.Parser.Parse(string(content))
+		p, err := m.Registry.For(name)
+		if err != nil {
+			return rolledBack, err
+		}
+		_, down, err := p.Parse(string(content))
 		if err != nil {
 			return rolledBack, err
 		}
@@ -135,7 +143,11 @@ func (m *Migrator) Reset() ([]string, error) {
 		if err != nil {
 			return rolledBack, err
 		}
-		_, down, err := m.Parser.Parse(string(content))
+		p, err := m.Registry.For(name)
+		if err != nil {
+			return rolledBack, err
+		}
+		_, down, err := p.Parse(string(content))
 		if err != nil {
 			return rolledBack, err
 		}
@@ -164,7 +176,7 @@ func (m *Migrator) Status() ([]map[string]string, error) {
 
 	var allMigrations []string
 	for _, f := range files {
-		if !f.IsDir() && strings.HasSuffix(f.Name(), ".sql") {
+		if !f.IsDir() && m.Registry.IsMigrationFile(f.Name()) {
 			allMigrations = append(allMigrations, f.Name())
 		}
 	}

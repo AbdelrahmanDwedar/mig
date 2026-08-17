@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AbdelrahmanDwedar/mig/docs/json-migrations.schema.json",
+  "title": "mig JSON migration",
+  "description": "Schema for mig's JSON migration language. Derived reference for editors/agents -- not enforced by mig itself. See docs/json-migrations.md for the prose reference.",
+  "type": "object",
+  "required": ["up", "down"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "up": { "type": "array", "items": { "$ref": "#/$defs/op" } },
+    "down": { "type": "array", "items": { "$ref": "#/$defs/op" } }
+  },
+  "$defs": {
+    "abstractType": {
+      "type": "string",
+      "enum": ["string", "text", "integer", "bigint", "boolean", "uuid", "timestamp", "date", "decimal", "json", "float"]
+    },
+    "default": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "literal": {},
+        "expr": { "type": "string" }
+      }
+    },
+    "column": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "$ref": "#/$defs/abstractType" },
+        "length": { "type": "integer" },
+        "precision": { "type": "integer" },
+        "scale": { "type": "integer" },
+        "nullable": { "type": "boolean" },
+        "primary_key": { "type": "boolean" },
+        "unique": { "type": "boolean" },
+        "auto_increment": { "type": "boolean" },
+        "default": { "$ref": "#/$defs/default" }
+      }
+    },
+    "index": {
+      "type": "object",
+      "required": ["name", "columns"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "columns": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "unique": { "type": "boolean" }
+      }
+    },
+    "foreignKey": {
+      "type": "object",
+      "required": ["columns", "ref_table", "ref_columns"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "columns": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "ref_table": { "type": "string" },
+        "ref_columns": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "on_delete": { "type": "string" },
+        "on_update": { "type": "string" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": ["expr"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "expr": { "type": "string" }
+      }
+    },
+    "op": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["op", "table", "columns"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "create_table" },
+            "table": { "type": "string" },
+            "if_not_exists": { "type": "boolean" },
+            "columns": { "type": "array", "items": { "$ref": "#/$defs/column" }, "minItems": 1 },
+            "indexes": { "type": "array", "items": { "$ref": "#/$defs/index" } },
+            "foreign_keys": { "type": "array", "items": { "$ref": "#/$defs/foreignKey" } },
+            "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "drop_table" },
+            "table": { "type": "string" },
+            "if_exists": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "from", "to"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "rename_table" },
+            "from": { "type": "string" },
+            "to": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "column"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "add_column" },
+            "table": { "type": "string" },
+            "column": { "$ref": "#/$defs/column" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "column"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "drop_column" },
+            "table": { "type": "string" },
+            "column": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "from", "to"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "rename_column" },
+            "table": { "type": "string" },
+            "from": { "type": "string" },
+            "to": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "column"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "alter_column" },
+            "table": { "type": "string" },
+            "column": { "type": "string" },
+            "type": { "$ref": "#/$defs/abstractType" },
+            "length": { "type": "integer" },
+            "precision": { "type": "integer" },
+            "scale": { "type": "integer" },
+            "nullable": { "type": "boolean" },
+            "default": { "$ref": "#/$defs/default" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "index"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "add_index" },
+            "table": { "type": "string" },
+            "index": { "$ref": "#/$defs/index" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "drop_index" },
+            "table": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "foreign_key"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "add_foreign_key" },
+            "table": { "type": "string" },
+            "foreign_key": { "$ref": "#/$defs/foreignKey" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "drop_foreign_key" },
+            "table": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "check"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "add_constraint" },
+            "table": { "type": "string" },
+            "check": { "$ref": "#/$defs/check" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "table", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "drop_constraint" },
+            "table": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "query"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "sql" },
+            "query": { "type": "string" }
+          }
+        }
+      ]
+    }
+  }
+}

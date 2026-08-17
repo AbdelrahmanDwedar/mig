@@ -29,6 +29,36 @@ func TestLoadConfig(t *testing.T) {
 	}
 }
 
+func TestLoadConfig_FileNotFound(t *testing.T) {
+	if _, err := config.LoadConfig("does_not_exist.yml"); err == nil {
+		t.Fatal("expected error for missing config file, got nil")
+	}
+}
+
+func TestLoadConfig_NoProjectRoot(t *testing.T) {
+	// Run from a directory with no .git ancestor so findProjectRoot's
+	// "not found" branch (falling back to a local .env load) is exercised.
+	tmpDir, err := os.MkdirTemp("", "mig-no-git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+	t.Chdir(tmpDir)
+
+	content := []byte("database:\n  driver: sqlite\n  dbname: test.db\n")
+	if err := os.WriteFile("mig.yml", content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.LoadConfig("mig.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Database.Driver != "sqlite" {
+		t.Errorf("Expected driver sqlite, got %s", cfg.Database.Driver)
+	}
+}
+
 func TestLoadConfigInterpolation(t *testing.T) {
 	tests := []struct {
 		name        string
