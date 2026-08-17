@@ -10,6 +10,7 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/db"
 	"github.com/AbdelrahmanDwedar/mig/internal/migrate"
 	"github.com/AbdelrahmanDwedar/mig/internal/parser"
+	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
@@ -54,6 +55,12 @@ func printResult(data any, err error, plainFn func()) error {
 	}
 	return nil
 }
+
+const jsonMigrationBoilerplate = `{
+  "up": [],
+  "down": []
+}
+`
 
 func runSetup(driver, dbName, dir string) (created bool, err error) {
 	if _, err := os.Stat("mig.yml"); err == nil {
@@ -103,7 +110,7 @@ func runSetup(driver, dbName, dir string) (created bool, err error) {
   # password: password
   dbname: %s
 migrations:
-  parser: sql
+  parser: sql # or json -- sets the default format for 'mig create'
   dir: %s
 `, dbName, dir)
 	} else {
@@ -115,7 +122,7 @@ migrations:
   password: password
   dbname: %s
 migrations:
-  parser: sql
+  parser: sql # or json -- sets the default format for 'mig create'
   dir: %s
 `, driver, dbName, dir)
 	}
@@ -134,7 +141,26 @@ migrations:
 	return true, nil
 }
 
-func createMigration(name string) (string, error) {
+// resolveFormat applies the format precedence for `mig create`: an explicit
+// --format flag wins, then mig.yml's migrations.parser, then "sql".
+func resolveFormat(cmd *cobra.Command, formatFlag string, cfg *config.Config) (string, error) {
+	format := "sql"
+	if cfg != nil && cfg.Migrations.Parser != "" {
+		format = cfg.Migrations.Parser
+	}
+	if cmd.Flag("format").Changed {
+		format = formatFlag
+	}
+
+	switch format {
+	case "sql", "json":
+		return format, nil
+	default:
+		return "", fmt.Errorf("unsupported format: %q (must be \"sql\" or \"json\")", format)
+	}
+}
+
+func createMigration(name, format string) (string, error) {
 	cfg, err := config.LoadConfig("mig.yml")
 	dir := "migrations"
 	if err == nil && cfg.Migrations.Dir != "" {
@@ -142,9 +168,18 @@ func createMigration(name string) (string, error) {
 	}
 
 	timestamp := time.Now().Format("2006_01_02_150405")
-	filename := fmt.Sprintf("%s/%s_%s.sql", dir, timestamp, name)
 
-	if err := os.WriteFile(filename, []byte(migrationBoilerplate), 0644); err != nil {
+	var extension, boilerplate string
+	switch format {
+	case "json":
+		extension, boilerplate = "json", jsonMigrationBoilerplate
+	default:
+		extension, boilerplate = "sql", migrationBoilerplate
+	}
+
+	filename := fmt.Sprintf("%s/%s_%s.%s", dir, timestamp, name, extension)
+
+	if err := os.WriteFile(filename, []byte(boilerplate), 0644); err != nil {
 		return "", fmt.Errorf("failed to create migration file: %w", err)
 	}
 	if !jsonOutput {
@@ -153,13 +188,12 @@ func createMigration(name string) (string, error) {
 	return filename, nil
 }
 
-func getParser(parserType string) (parser.Parser, error) {
-	switch parserType {
-	case "sql", "": // default to sql
-		return &parser.SQLParser{}, nil
-	default:
-		return nil, fmt.Errorf("unsupported parser: %s", parserType)
+func newRegistry(cfg *config.Config) (*parser.Registry, error) {
+	dialect, err := sqlgen.New(cfg.Database.Driver)
+	if err != nil {
+		return nil, err
 	}
+	return parser.NewRegistry(dialect), nil
 }
 
 // newMigrator loads mig.yml, constructs and connects a driver, and returns a
@@ -173,7 +207,7 @@ func newMigrator() (*migrate.Migrator, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, err := getParser(cfg.Migrations.Parser)
+	reg, err := newRegistry(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +220,7 @@ func newMigrator() (*migrate.Migrator, error) {
 		dir = cfg.Migrations.Dir
 	}
 
-	return &migrate.Migrator{Driver: driver, Parser: p, Dir: dir}, nil
+	return &migrate.Migrator{Driver: driver, Registry: reg, Dir: dir}, nil
 }
 
 func NewRootCmd() *cobra.Command {
@@ -212,15 +246,22 @@ func NewRootCmd() *cobra.Command {
 	setupCmd.Flags().StringVar(&dbNameFlag, "dbname", "", "Database name or SQLite file")
 	setupCmd.Flags().StringVar(&dirFlag, "dir", "", "Migration directory")
 
+	var formatFlag string
 	var createCmd = &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create a new migration file",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			filename, err := createMigration(args[0])
+			cfg, _ := config.LoadConfig("mig.yml")
+			format, err := resolveFormat(cmd, formatFlag, cfg)
+			if err != nil {
+				return err
+			}
+			filename, err := createMigration(args[0], format)
 			return printResult(map[string]any{"file": filename}, err, nil)
 		},
 	}
+	createCmd.Flags().StringVar(&formatFlag, "format", "sql", "Migration file format (sql, json)")
 
 	var migrateCmd = &cobra.Command{
 		Use:   "migrate",

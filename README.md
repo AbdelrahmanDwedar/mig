@@ -15,7 +15,7 @@
 Stop wrestling with complex migration tools. **Mig** gives you a streamlined, driver-based approach to managing your database schema, no matter the language you use. 
 
 ### ✨ Key Features
-- **Language Agnostic:** Currently supports SQL with a robust, directive-based parser (`+migrate Up`/`Down`).
+- **Two migration formats:** raw SQL (`+migrate Up`/`Down` directives) or structured **[JSON migrations](docs/json-migrations.md)** — portable column types, indexes, foreign keys, and constraints as data, with a raw-SQL escape hatch for anything else. `.sql` and `.json` files coexist in the same migrations directory.
 - **Driver-First:** First-class support for **PostgreSQL**, **MySQL**, and **SQLite**.
 - **Dev-Friendly:** Interactive `setup` with sensible defaults.
 - **Advanced Control:** Selective rollback (`--steps`), specific file targeting (`--migration`), and safe `fresh`/`refresh` cycles.
@@ -142,7 +142,7 @@ database:
   password: ${DB_PASSWORD:?database password is required}
   dbname: ${DB_NAME:-mydatabase}
 migrations:
-  parser: sql
+  parser: sql   # or json -- sets the default format for `mig create`; see docs/json-migrations.md
   dir: migrations
 ```
 
