@@ -415,3 +415,145 @@ func TestCLI_MigrateWithoutSetup(t *testing.T) {
 		t.Error("expected Success=false when mig.yml is missing")
 	}
 }
+
+func TestCLI_CreateTemplate_SQL(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if _, err := runSetup("sqlite", "test.db", "migrations"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runCLI(t, "create", "add_users", "--template", "create_table",
+		"--table", "users", "--columns", "id:bigint:pk:auto,email:string(255):unique", "--json")
+	if err != nil {
+		t.Fatalf("create --template: %v (%s)", err, out)
+	}
+	var result Result
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("output not JSON: %v (%s)", err, out)
+	}
+	if !result.Success {
+		t.Fatalf("create --template did not succeed: %+v", result)
+	}
+	data, _ := result.Data.(map[string]any)
+	filename, _ := data["file"].(string)
+	if filename == "" || filepath.Ext(filename) != ".sql" {
+		t.Fatalf("expected a .sql migration file, got %+v", result.Data)
+	}
+
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(content), "CREATE TABLE") || !strings.Contains(string(content), "users") {
+		t.Errorf("expected dialect-rendered CREATE TABLE, got:\n%s", content)
+	}
+	if !strings.Contains(string(content), "-- +migrate Up") || !strings.Contains(string(content), "-- +migrate Down") {
+		t.Errorf("expected migrate markers, got:\n%s", content)
+	}
+	if !strings.Contains(string(content), "DROP TABLE") {
+		t.Errorf("expected mechanically-derived down (DROP TABLE), got:\n%s", content)
+	}
+}
+
+func TestCLI_CreateTemplate_JSON(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if _, err := runSetup("sqlite", "test.db", "migrations"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runCLI(t, "create", "add_users", "--format", "json", "--template", "create_table",
+		"--table", "users", "--columns", "id:bigint:pk:auto,email:string(255):unique", "--json")
+	if err != nil {
+		t.Fatalf("create --template: %v (%s)", err, out)
+	}
+	var result Result
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("output not JSON: %v (%s)", err, out)
+	}
+	data, _ := result.Data.(map[string]any)
+	filename, _ := data["file"].(string)
+	if filename == "" || filepath.Ext(filename) != ".json" {
+		t.Fatalf("expected a .json migration file, got %+v", result.Data)
+	}
+
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(content), `"create_table"`) || !strings.Contains(string(content), `"drop_table"`) {
+		t.Errorf("expected create_table/drop_table op envelope, got:\n%s", content)
+	}
+}
+
+func TestCLI_CreateTemplate_UnknownTemplate(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if _, err := runSetup("sqlite", "test.db", "migrations"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCLI(t, "create", "bogus", "--template", "not_a_real_op", "--table", "users"); err == nil {
+		t.Fatal("expected error for unknown --template value")
+	}
+}
+
+func TestCLI_CreateTemplate_MissingRequiredFlags(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"create_table missing --columns", []string{"create", "n", "--template", "create_table", "--table", "users"}},
+		{"add_column missing --columns", []string{"create", "n", "--template", "add_column", "--table", "users"}},
+		{"drop_column missing --column", []string{"create", "n", "--template", "drop_column", "--table", "users"}},
+		{"rename_table missing --to", []string{"create", "n", "--template", "rename_table", "--table", "users"}},
+		{"add_index missing --index", []string{"create", "n", "--template", "add_index", "--table", "users"}},
+		{"drop_index missing --index-name", []string{"create", "n", "--template", "drop_index", "--table", "users"}},
+		{"add_foreign_key missing --fk-references", []string{"create", "n", "--template", "add_foreign_key", "--table", "posts", "--fk-column", "user_id"}},
+		{"drop_foreign_key missing --fk-name", []string{"create", "n", "--template", "drop_foreign_key", "--table", "posts"}},
+		{"missing --table entirely", []string{"create", "n", "--template", "create_table", "--columns", "id:integer"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			if _, err := runSetup("sqlite", "test.db", "migrations"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := runCLI(t, c.args...); err == nil {
+				t.Fatalf("expected error for %s", c.name)
+			}
+		})
+	}
+}
+
+func TestCLI_CreateTemplate_RequiresConfigForSQLFormat(t *testing.T) {
+	t.Chdir(t.TempDir())
+	// No mig.yml, so there's no driver to resolve a dialect from.
+	if _, err := runCLI(t, "create", "add_users", "--template", "create_table",
+		"--table", "users", "--columns", "id:integer"); err == nil {
+		t.Fatal("expected error resolving dialect without mig.yml")
+	}
+}
+
+func TestCLI_Create_NoTemplate_Unchanged(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if _, err := runSetup("sqlite", "test.db", "migrations"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runCLI(t, "create", "add_widgets", "--json")
+	if err != nil {
+		t.Fatalf("create: %v (%s)", err, out)
+	}
+	var result Result
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("output not JSON: %v (%s)", err, out)
+	}
+	data, _ := result.Data.(map[string]any)
+	filename, _ := data["file"].(string)
+
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != migrationBoilerplate {
+		t.Errorf("expected byte-identical boilerplate when --template is unset, got:\n%s", content)
+	}
+}
