@@ -58,6 +58,26 @@ func TestMySQL_AlterColumn(t *testing.T) {
 	assertStatements(t, stmts, []string{"ALTER TABLE `users` MODIFY COLUMN `age` BIGINT NOT NULL DEFAULT 0"})
 }
 
+func TestMySQL_CreateTable_BigintAutoIncrement(t *testing.T) {
+	d := mustDialect(t, "mysql")
+	stmts := buildOp(t, d, `{
+		"op": "create_table",
+		"table": "t",
+		"columns": [{"name": "id", "type": "bigint", "auto_increment": true, "primary_key": true}]
+	}`)
+	assertStatements(t, stmts, []string{
+		"CREATE TABLE `t` (\n  `id` BIGINT AUTO_INCREMENT,\n  PRIMARY KEY (`id`)\n)",
+	})
+}
+
+func TestMySQL_AlterColumn_InvalidType(t *testing.T) {
+	d := mustDialect(t, "mysql")
+	_, err := sqlgen.BuildStatement(d, json.RawMessage(`{"op": "alter_column", "table": "users", "column": "age", "type": "unobtainium"}`))
+	if err == nil {
+		t.Fatal("expected error for unsupported alter_column type, got nil")
+	}
+}
+
 func TestMySQL_AlterColumn_RequiresType(t *testing.T) {
 	d := mustDialect(t, "mysql")
 	_, err := sqlgen.BuildStatement(d, json.RawMessage(`{"op": "alter_column", "table": "users", "column": "age", "nullable": false}`))

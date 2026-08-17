@@ -46,6 +46,26 @@ func TestJSONParser_Parse_InvalidJSON(t *testing.T) {
 	}
 }
 
+func TestJSONParser_Parse_EmptySections(t *testing.T) {
+	dialect, _ := sqlgen.New("sqlite")
+	p := parser.NewJSONParser(dialect)
+	up, down, err := p.Parse(`{"up": [], "down": []}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if up != "" || down != "" {
+		t.Errorf("expected empty up/down for empty op lists, got up=%q down=%q", up, down)
+	}
+}
+
+func TestJSONParser_Parse_DownOpError(t *testing.T) {
+	dialect, _ := sqlgen.New("sqlite")
+	p := parser.NewJSONParser(dialect)
+	if _, _, err := p.Parse(`{"up": [], "down": [{"op": "frobnicate"}]}`); err == nil {
+		t.Fatal("expected error for unknown op in down section, got nil")
+	}
+}
+
 func TestJSONParser_Parse_UnknownOp(t *testing.T) {
 	dialect, _ := sqlgen.New("sqlite")
 	p := parser.NewJSONParser(dialect)

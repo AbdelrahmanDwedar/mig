@@ -122,6 +122,26 @@ func TestPostgres_AlterColumn(t *testing.T) {
 	})
 }
 
+func TestPostgres_CreateTable_BigintAutoIncrement(t *testing.T) {
+	d := mustDialect(t, "postgresql")
+	stmts := buildOp(t, d, `{
+		"op": "create_table",
+		"table": "t",
+		"columns": [{"name": "id", "type": "bigint", "auto_increment": true, "primary_key": true}]
+	}`)
+	assertStatements(t, stmts, []string{
+		"CREATE TABLE \"t\" (\n  \"id\" BIGSERIAL,\n  PRIMARY KEY (\"id\")\n)",
+	})
+}
+
+func TestPostgres_AlterColumn_DropNotNull(t *testing.T) {
+	d := mustDialect(t, "postgresql")
+	stmts := buildOp(t, d, `{"op": "alter_column", "table": "users", "column": "age", "nullable": true}`)
+	assertStatements(t, stmts, []string{
+		`ALTER TABLE "users" ALTER COLUMN "age" DROP NOT NULL`,
+	})
+}
+
 func TestPostgres_AlterColumn_NoChanges(t *testing.T) {
 	d := mustDialect(t, "postgresql")
 	_, err := sqlgen.BuildStatement(d, json.RawMessage(`{"op": "alter_column", "table": "users", "column": "age"}`))
