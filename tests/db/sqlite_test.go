@@ -49,6 +49,73 @@ func TestSQLiteDriver_Integration(t *testing.T) {
 	}
 }
 
+func TestSQLiteDriver_ApplyMigration_BadSQL(t *testing.T) {
+	dbName := "test_apply_bad_sql.db"
+	defer os.Remove(dbName)
+
+	cfg := &config.DatabaseConfig{Driver: "sqlite", DBName: dbName}
+	driver, err := db.NewDriver(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := driver.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	defer driver.Close()
+
+	if err := driver.EnsureMigrationsTable(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := driver.ApplyMigration("bad.sql", "NOT VALID SQL;"); err == nil {
+		t.Fatal("expected error for invalid SQL, got nil")
+	}
+
+	applied, err := driver.GetAppliedMigrations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(applied) != 0 {
+		t.Error("failed migration should not be recorded as applied")
+	}
+}
+
+func TestSQLiteDriver_RollbackMigration_BadSQL(t *testing.T) {
+	dbName := "test_rollback_bad_sql.db"
+	defer os.Remove(dbName)
+
+	cfg := &config.DatabaseConfig{Driver: "sqlite", DBName: dbName}
+	driver, err := db.NewDriver(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := driver.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	defer driver.Close()
+
+	if err := driver.EnsureMigrationsTable(); err != nil {
+		t.Fatal(err)
+	}
+
+	mName := "2026_01_01_test.sql"
+	if err := driver.ApplyMigration(mName, "CREATE TABLE users (id INT)"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := driver.RollbackMigration(mName, "NOT VALID SQL;"); err == nil {
+		t.Fatal("expected error for invalid down SQL, got nil")
+	}
+
+	applied, err := driver.GetAppliedMigrations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(applied) != 1 {
+		t.Error("failed rollback should leave the migration recorded as applied")
+	}
+}
+
 func TestSQLiteDriver_JSONMigration_RoundTrip(t *testing.T) {
 	dbName := "test_json_roundtrip.db"
 	defer os.Remove(dbName)
