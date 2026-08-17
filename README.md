@@ -58,6 +58,22 @@ sudo dnf install mig
 ### Manual Installation
 You can also download the pre-compiled binaries directly from our [Releases](https://github.com/AbdelrahmanDwedar/mig/releases) page.
 
+### Docker
+
+Mig is also published as a Docker image on [Docker Hub](https://hub.docker.com/r/abdelrahmandwedar/mig). Since Mig reads `mig.yml` and your `migrations/` directory from its working directory, mount your project directory to `/workspace`:
+
+```bash
+docker pull abdelrahmandwedar/mig
+
+# Run a command against a project already set up on the host
+docker run --rm -v $(pwd):/workspace abdelrahmandwedar/mig migrate
+
+# Interactive first-time setup (creates mig.yml + migrations/ on the host via the mount)
+docker run --rm -it -v $(pwd):/workspace abdelrahmandwedar/mig setup
+```
+
+For Postgres/MySQL, make sure the container can reach your database over the network (e.g. `--network` to join a Docker Compose network, or `host.docker.internal` for a host-local database). For SQLite, the database file must live inside the mounted `/workspace` directory to persist between runs.
+
 ---
 
 ## 🏁 Getting Started
