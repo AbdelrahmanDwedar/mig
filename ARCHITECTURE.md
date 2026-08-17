@@ -66,7 +66,9 @@ sequenceDiagram
 - **`internal/config`**: Loads `mig.yml` and merges with environment variables.
 - **`internal/db`**: Driver interfaces and implementations for PostgreSQL, MySQL, and SQLite.
 - **`internal/migrate`**: Orchestrates migration lifecycle (migrate, rollback, reset, status).
-- **`internal/parser`**: Handles migration file parsing (via `Parser` interface).
+- **`internal/parser`**: Handles migration file parsing (via `Parser` interface), dispatched by file extension through a `Registry` (`.sql`, `.json`).
+- **`internal/sqlgen`**: Portable op structs (`CreateTableOp`, `AddColumnOp`, ...) and the per-dialect `Dialect` interface (Postgres/MySQL/SQLite) that renders them to native SQL — the shared backing for JSON migrations and templates alike.
+- **`internal/template`**: Scaffolds common ops (see [docs/templates.md](docs/templates.md)) for `mig create --template`, rendering via the same `sqlgen.Dialect` methods used at migrate-time.
 
 ## Deployment Pipeline
 Mig uses a custom CI/CD pipeline built with GitHub Actions and **nfpm**:
@@ -82,4 +84,6 @@ Migrations are tracked via an `_migrations` table in the target database with:
 
 ## Extensibility
 - **New Drivers:** Implement the `db.Driver` interface in `internal/db` and add to `factory.go`.
-- **New Parsers:** Implement the `parser.Parser` interface in `internal/parser` and add to the `getParser` logic in `cmd/mig/`.
+- **New Parsers:** Implement the `parser.Parser` interface in `internal/parser` and register it in `parser.NewRegistry`.
+- **New Dialects/Engines:** Implement the `sqlgen.Dialect` interface in `internal/sqlgen` and register it in `sqlgen.New` — JSON migrations and templates both pick it up automatically.
+- **New Templates:** Add a case to `template.BuildOp`/`template.Down` in `internal/template` — no changes needed to `internal/sqlgen` or `internal/parser`.
