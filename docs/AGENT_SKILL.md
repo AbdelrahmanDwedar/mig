@@ -222,15 +222,6 @@ anything until you replace it.)
 Full flag reference and the `--columns` mini-DSL grammar in detail:
 **[docs/templates.md](templates.md)**.
 
-## Apply pending migrations
-
-```bash
-mig migrate --json
-```
-
-Applies all pending `.sql`/`.json` files in the migrations dir (both formats
-coexist and interleave purely by filename order), in filename-sorted (i.e.
-timestamp) order. Each file is applied in **its own transaction** —
 this is not one big transaction for the whole batch. If file 3 of 5 pending
 fails, files 1–2 are already committed and will show as `Applied`; files 4–5
 are never attempted. Fix file 3 and re-run `mig migrate` — it will correctly
