@@ -1,10 +1,12 @@
 # JSON Migrations
 
-`mig` supports two migration file formats: the original raw-`.sql` format
-(`-- +migrate Up` / `-- +migrate Down` markers) and a structured JSON format.
-Both are first-class — `.sql` and `.json` migration files can coexist in the
-same `migrations/` directory, applied in chronological (filename) order
-regardless of format.
+`mig` supports three migration file formats: the original raw-`.sql` format
+(`-- +migrate Up` / `-- +migrate Down` markers), a structured JSON format,
+and its YAML equivalent (see [YAML Migrations](yaml-migrations.md)). All
+three are first-class — `.sql`, `.json`, and `.yaml`/`.yml` migration files
+can coexist in the same `migrations/` directory, applied in chronological
+(filename) order regardless of format. This op vocabulary is identical for
+JSON and YAML — see the YAML doc if you'd rather author migrations as YAML.
 
 ## 1. Overview
 

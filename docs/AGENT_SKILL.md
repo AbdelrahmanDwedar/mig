@@ -46,7 +46,7 @@ output has no stable format and may change wording across versions.
 | Command | `data` shape on success |
 |---|---|
 | `setup` | `{"driver","dbname","dir","created"}` — `created` is `false` if `mig.yml` already existed (setup no-ops, still exit 0) |
-| `create <name>` | `{"file": "<path>"}` — extension is `.sql` or `.json` depending on the resolved format, see [Create a migration](#create-a-migration) |
+| `create <name>` | `{"file": "<path>"}` — extension is `.sql`, `.json`, or `.yaml` depending on the resolved format, see [Create a migration](#create-a-migration) |
 | `migrate` | `{"applied": [<filenames in order applied>]}` |
 | `rollback` | `{"rolled_back": [<filenames in order rolled back>]}` |
 | `reset` | `{"rolled_back": [<filenames>]}` |
@@ -86,7 +86,7 @@ database:
   password: password
   dbname: mydatabase   # for sqlite this is the .db file path, not a DB name
 migrations:
-  parser: sql          # sql | json — default format for `mig create`; see below
+  parser: sql          # sql | json | yaml — default format for `mig create`; see below
   dir: migrations
 ```
 
@@ -114,9 +114,10 @@ you can't cheaply convert between them after the fact:
 
 | You want... | Run | Produces |
 |---|---|---|
-| A scaffolded, dialect-correct migration for a common op (create/drop table, add/drop column, add/drop index, add/drop FK, rename) | `mig create <name> --template <op> ...` (see below) | Real SQL or the equivalent JSON op — **prefer this whenever the op fits the [10 supported templates](templates.md#2-supported-templates)** |
+| A scaffolded, dialect-correct migration for a common op (create/drop table, add/drop column, add/drop index, add/drop FK, rename) | `mig create <name> --template <op> ...` (see below) | Real SQL or the equivalent JSON/YAML op — **prefer this whenever the op fits the [10 supported templates](templates.md#2-supported-templates)** |
 | Full manual control over raw SQL | `mig create <name> --format sql` (or omit `--format`, it's the default) | Empty `-- +migrate Up`/`Down` boilerplate you fill in yourself |
 | Full manual control but as structured, portable ops (views/triggers/anything `--template` doesn't cover, or multiple ops in one file) | `mig create <name> --format json` | Empty `{"up": [], "down": []}` — write ops by hand, see [json-migrations.md](json-migrations.md) |
+| Same as above, written as YAML | `mig create <name> --format yaml` | Empty `down: []` / `up: []` — write ops by hand, see [yaml-migrations.md](yaml-migrations.md) |
 
 Empty `.sql` boilerplate:
 
@@ -201,9 +202,9 @@ has a placeholder in the down section:
 
 **You must read the generated file and replace that TODO line yourself**
 before treating the migration as reversible — don't apply-then-forget for
-these four ops. (In `.json` output it's `{"op": "sql", "query": "-- TODO: ..."}`,
-which still parses/applies fine as a no-op — it just won't actually reverse
-anything until you replace it.)
+these four ops. (In `.json`/`.yaml` output it's
+`{"op": "sql", "query": "-- TODO: ..."}`, which still parses/applies fine
+as a no-op — it just won't actually reverse anything until you replace it.)
 
 **Errors an agent should recognize and handle, not just surface to the user:**
 
@@ -216,8 +217,9 @@ anything until you replace it.)
 | `--template rename_table requires --to` / `rename_column requires ... --to` | Missing `--to` | Add the new name |
 | `--template drop_index requires --index-name` | `add_index`'s auto-derived name convention doesn't apply to drops — you must know the exact existing index name | Look it up (e.g. from the migration that created it) rather than guessing |
 | `invalid column spec "...": unknown type "..."` | Type isn't one of the [abstract types](json-migrations.md#4-column-type-reference) | Use `string`/`text`/`integer`/`bigint`/`boolean`/`uuid`/`timestamp`/`date`/`decimal`/`json`/`float` |
-| `sqlite does not support ...` | Targeting a SQLite `mig.yml` with `add_foreign_key`/`drop_foreign_key`/`alter_column`/constraints | Bake FKs into `create_table` instead, or use `--format json` with the raw `sql` op — see [Known limitations](json-migrations.md#6-known-limitations) |
-| `requires a mig.yml to resolve the database dialect` | `--template` with `--format sql` (or the resolved default) run before `mig setup` | Run `mig setup` first, or add `--format json` to skip dialect resolution |
+| `sqlite does not support ...` | Targeting a SQLite `mig.yml` with `add_foreign_key`/`drop_foreign_key`/`alter_column`/constraints | Bake FKs into `create_table` instead, or use `--format json`/`--format yaml` with the raw `sql` op — see [Known limitations](json-migrations.md#6-known-limitations) |
+| `requires a mig.yml to resolve the database dialect` | `--template` with `--format sql` (or the resolved default) run before `mig setup` | Run `mig setup` first, or add `--format json`/`--format yaml` to skip dialect resolution |
+| `invalid YAML migration: ...` | `.yaml`/`.yml` file has a syntax error (bad indentation, a literal tab character, or a second `---`-separated document) | Fix the YAML syntax — see [YAML-specific gotchas](yaml-migrations.md#5-yaml-specific-gotchas) |
 
 Full flag reference and the `--columns` mini-DSL grammar in detail:
 **[docs/templates.md](templates.md)**.
@@ -258,7 +260,7 @@ mig refresh --json                         # alias of fresh
 mig status --json
 ```
 
-Returns every `.sql`/`.json` file in the migrations dir with `Applied` or
+Returns every `.sql`/`.json`/`.yaml`/`.yml` file in the migrations dir with `Applied` or
 `Pending` — purely a filename-vs-tracking-table diff, doesn't touch schema
 state directly.
 
@@ -279,8 +281,8 @@ adding/dropping a table/column/index/FK, or a rename):
 **Otherwise** (views, triggers, `alter_column`, constraints, or anything
 else outside the template set):
 
-1. `mig create <descriptive_name> --json` (add `--format json` for
-   structured ops, omit/`--format sql` for raw SQL) → get the file path back.
+1. `mig create <descriptive_name> --json` (add `--format json`/`--format yaml`
+   for structured ops, omit/`--format sql` for raw SQL) → get the file path back.
 2. Write the Up and its exact inverse as the Down, in whichever format you chose.
 3. `mig migrate --json` → confirm the filename appears in `applied`.
 4. `mig status --json` → confirm it now shows `Applied`.
@@ -297,9 +299,10 @@ else outside the template set):
 - Supported drivers are PostgreSQL, MySQL, and SQLite only (`internal/db/factory.go`);
   passing any other `driver` value in `mig.yml` fails at runtime with
   "unsupported driver: X".
-- `migrations.parser` in `mig.yml` accepts `sql` or `json` only — anything
-  else errors at runtime (this only sets the *default* for `mig create`;
-  `.sql` and `.json` files always coexist and both apply regardless of it).
+- `migrations.parser` in `mig.yml` accepts `sql`, `json`, or `yaml` only —
+  anything else errors at runtime (this only sets the *default* for
+  `mig create`; `.sql`, `.json`, and `.yaml`/`.yml` files always coexist and
+  all apply regardless of it).
 - `--template` renders through the real per-dialect code, so switching
   `mig.yml`'s `database.driver` changes what SQL a future `--template`
   invocation produces — always re-check `database.driver` before scaffolding
