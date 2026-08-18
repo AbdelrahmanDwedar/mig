@@ -8,17 +8,20 @@ import (
 )
 
 // Registry dispatches a migration file to the Parser matching its
-// extension, so .sql and .json migrations can coexist in the same
-// migrations directory.
+// extension, so .sql, .json, and .yaml/.yml migrations can coexist in the
+// same migrations directory.
 type Registry struct {
 	parsers map[string]Parser
 }
 
 func NewRegistry(dialect sqlgen.Dialect) *Registry {
+	yamlParser := NewYAMLParser(dialect)
 	return &Registry{
 		parsers: map[string]Parser{
 			".sql":  &SQLParser{},
 			".json": NewJSONParser(dialect),
+			".yaml": yamlParser,
+			".yml":  yamlParser,
 		},
 	}
 }
