@@ -16,6 +16,7 @@ Stop wrestling with complex migration tools. **Mig** gives you a streamlined, dr
 
 ### ✨ Key Features
 - **Two migration formats:** raw SQL (`+migrate Up`/`Down` directives) or structured **[JSON migrations](docs/json-migrations.md)** — portable column types, indexes, foreign keys, and constraints as data, with a raw-SQL escape hatch for anything else. `.sql` and `.json` files coexist in the same migrations directory.
+- **[Migration templates](docs/templates.md):** scaffold `create_table`, `add_column`, `add_index`, `add_foreign_key`, and more directly via `mig create --template`, rendered as dialect-correct SQL or the equivalent JSON op.
 - **Driver-First:** First-class support for **PostgreSQL**, **MySQL**, and **SQLite**.
 - **Dev-Friendly:** Interactive `setup` with sensible defaults.
 - **Advanced Control:** Selective rollback (`--steps`), specific file targeting (`--migration`), and safe `fresh`/`refresh` cycles.
@@ -26,6 +27,7 @@ Stop wrestling with complex migration tools. **Mig** gives you a streamlined, dr
 - [Installation](#-installation)
 - [Getting Started](#-getting-started)
 - [Usage](#-usage)
+- [Migration Templates](docs/templates.md)
 - [Configuration](#-configuration)
 - [AI Agent Support](#-ai-agent-support)
 - [Architecture](#-architecture)
@@ -87,6 +89,10 @@ mig setup
 # 2. Create your first migration
 mig create add_users_table
 
+# 2b. ...or scaffold one from a template
+mig create add_users_table --template create_table \
+  --table users --columns "id:bigint:pk:auto,email:string(255):unique"
+
 # 3. Apply changes!
 mig migrate
 ```
@@ -98,7 +104,7 @@ mig migrate
 | Command | Description |
 | :--- | :--- |
 | `setup` | Initialize the project (or run for config-check) |
-| `create` | Generate a new timestamped migration |
+| `create` | Generate a new timestamped migration (`--format`, or scaffold one with [`--template`](docs/templates.md)) |
 | `migrate` | Run all pending migrations |
 | `rollback` | Reverse migrations (--steps, --migration) |
 | `reset` | Rollback *all* applied migrations |

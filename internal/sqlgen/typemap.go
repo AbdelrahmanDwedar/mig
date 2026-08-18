@@ -31,6 +31,13 @@ const (
 	defaultDecimalScale = 0
 )
 
+// IsValidAbstractType reports whether t is one of the portable abstract
+// column types known to typeMap.
+func IsValidAbstractType(t string) bool {
+	_, ok := typeMap[t]
+	return ok
+}
+
 // NativeColumnType resolves an abstract column type to its native SQL
 // rendering for the given dialect name ("postgresql", "mysql", "sqlite").
 func NativeColumnType(dialectName, abstractType string, length, precision, scale int) (string, error) {

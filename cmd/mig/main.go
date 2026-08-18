@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/AbdelrahmanDwedar/mig/internal/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/migrate"
 	"github.com/AbdelrahmanDwedar/mig/internal/parser"
 	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
+	"github.com/AbdelrahmanDwedar/mig/internal/template"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
@@ -188,6 +190,43 @@ func createMigration(name, format string) (string, error) {
 	return filename, nil
 }
 
+// createMigrationFromTemplate scaffolds a migration from a resolved
+// template Op instead of the empty boilerplate, rendering it via the same
+// dir/timestamp/extension conventions as createMigration. dialect may be
+// nil when format is "json" (dialect resolution for JSON migrations
+// happens later, at migrate-time).
+func createMigrationFromTemplate(name, format string, op template.Op, dialect sqlgen.Dialect) (string, error) {
+	cfg, err := config.LoadConfig("mig.yml")
+	dir := "migrations"
+	if err == nil && cfg.Migrations.Dir != "" {
+		dir = cfg.Migrations.Dir
+	}
+
+	var content, extension string
+	switch format {
+	case "json":
+		extension = "json"
+		content, err = template.RenderJSON(op)
+	default:
+		extension = "sql"
+		content, err = template.RenderSQL(dialect, op)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	timestamp := time.Now().Format("2006_01_02_150405")
+	filename := fmt.Sprintf("%s/%s_%s.%s", dir, timestamp, name, extension)
+
+	if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("failed to create migration file: %w", err)
+	}
+	if !jsonOutput {
+		fmt.Printf("Created migration: %s\n", filename)
+	}
+	return filename, nil
+}
+
 func newRegistry(cfg *config.Config) (*parser.Registry, error) {
 	dialect, err := sqlgen.New(cfg.Database.Driver)
 	if err != nil {
@@ -246,7 +285,10 @@ func NewRootCmd() *cobra.Command {
 	setupCmd.Flags().StringVar(&dbNameFlag, "dbname", "", "Database name or SQLite file")
 	setupCmd.Flags().StringVar(&dirFlag, "dir", "", "Migration directory")
 
-	var formatFlag string
+	var formatFlag, templateFlag, tableFlag, columnsFlag, columnFlag, toFlag string
+	var indexColsFlag, indexNameFlag, fkReferencesFlag, fkOnDeleteFlag, fkOnUpdateFlag, fkNameFlag string
+	var fkColumnsFlag []string
+	var indexUniqueFlag, ifNotExistsFlag, ifExistsFlag bool
 	var createCmd = &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create a new migration file",
@@ -257,11 +299,63 @@ func NewRootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			filename, err := createMigration(args[0], format)
+
+			if templateFlag == "" {
+				filename, err := createMigration(args[0], format)
+				return printResult(map[string]any{"file": filename}, err, nil)
+			}
+
+			op, err := template.BuildOp(templateFlag, template.Flags{
+				Table:        tableFlag,
+				Columns:      columnsFlag,
+				Column:       columnFlag,
+				To:           toFlag,
+				IndexColumns: indexColsFlag,
+				IndexName:    indexNameFlag,
+				IndexUnique:  indexUniqueFlag,
+				FKColumns:    fkColumnsFlag,
+				FKReferences: fkReferencesFlag,
+				FKOnDelete:   fkOnDeleteFlag,
+				FKOnUpdate:   fkOnUpdateFlag,
+				FKName:       fkNameFlag,
+				IfNotExists:  ifNotExistsFlag,
+				IfExists:     ifExistsFlag,
+			})
+			if err != nil {
+				return err
+			}
+
+			var dialect sqlgen.Dialect
+			if format != "json" {
+				if cfg == nil {
+					return fmt.Errorf("--template with --format sql requires a mig.yml to resolve the database dialect (run 'mig setup' first, or use --format json)")
+				}
+				dialect, err = sqlgen.New(cfg.Database.Driver)
+				if err != nil {
+					return err
+				}
+			}
+
+			filename, err := createMigrationFromTemplate(args[0], format, op, dialect)
 			return printResult(map[string]any{"file": filename}, err, nil)
 		},
 	}
 	createCmd.Flags().StringVar(&formatFlag, "format", "sql", "Migration file format (sql, json)")
+	createCmd.Flags().StringVar(&templateFlag, "template", "", "Scaffold a common op: "+strings.Join(template.SupportedTemplates, "|"))
+	createCmd.Flags().StringVar(&tableFlag, "table", "", "Target table name (all templates)")
+	createCmd.Flags().StringVar(&columnsFlag, "columns", "", `Column spec, e.g. "id:bigint:pk:auto,email:string(255):unique" (create_table, add_column)`)
+	createCmd.Flags().StringVar(&columnFlag, "column", "", "Column name (drop_column, rename_column)")
+	createCmd.Flags().StringVar(&toFlag, "to", "", "New name (rename_table, rename_column)")
+	createCmd.Flags().StringVar(&indexColsFlag, "index", "", "Comma-separated columns (add_index)")
+	createCmd.Flags().StringVar(&indexNameFlag, "index-name", "", "Index name (add_index, drop_index)")
+	createCmd.Flags().BoolVar(&indexUniqueFlag, "index-unique", false, "Index is UNIQUE (add_index)")
+	createCmd.Flags().StringArrayVar(&fkColumnsFlag, "fk-column", nil, "Foreign key source column, repeatable for composite keys (add_foreign_key)")
+	createCmd.Flags().StringVar(&fkReferencesFlag, "fk-references", "", `Referenced table(cols), e.g. "users(id)" (add_foreign_key)`)
+	createCmd.Flags().StringVar(&fkOnDeleteFlag, "fk-on-delete", "", "ON DELETE action (add_foreign_key)")
+	createCmd.Flags().StringVar(&fkOnUpdateFlag, "fk-on-update", "", "ON UPDATE action (add_foreign_key)")
+	createCmd.Flags().StringVar(&fkNameFlag, "fk-name", "", "Foreign key constraint name (add_foreign_key, drop_foreign_key)")
+	createCmd.Flags().BoolVar(&ifNotExistsFlag, "if-not-exists", false, "Add IF NOT EXISTS (create_table)")
+	createCmd.Flags().BoolVar(&ifExistsFlag, "if-exists", false, "Add IF EXISTS (drop_table)")
 
 	var migrateCmd = &cobra.Command{
 		Use:   "migrate",
