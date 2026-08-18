@@ -69,8 +69,14 @@ func TestResolveFormat(t *testing.T) {
 			want:      "json",
 		},
 		{
-			name:      "invalid format errors",
+			name:      "explicit flag accepts yaml",
 			flagValue: "yaml",
+			flagSet:   true,
+			want:      "yaml",
+		},
+		{
+			name:      "invalid format errors",
+			flagValue: "xml",
 			flagSet:   true,
 			wantErr:   true,
 		},
