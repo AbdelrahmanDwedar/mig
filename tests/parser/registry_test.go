@@ -29,6 +29,12 @@ func TestRegistry_IsMigrationFile(t *testing.T) {
 	if !reg.IsMigrationFile("2026_01_01_000000_x.json") {
 		t.Error("expected .json to be recognized as a migration file")
 	}
+	if !reg.IsMigrationFile("2026_01_01_000000_x.yaml") {
+		t.Error("expected .yaml to be recognized as a migration file")
+	}
+	if !reg.IsMigrationFile("2026_01_01_000000_x.yml") {
+		t.Error("expected .yml to be recognized as a migration file")
+	}
 	if reg.IsMigrationFile("README.md") {
 		t.Error("expected .md to not be recognized as a migration file")
 	}

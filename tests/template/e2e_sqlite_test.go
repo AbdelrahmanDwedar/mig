@@ -38,9 +38,9 @@ func buildScaffoldedMigrations(t *testing.T, dir, format string, dialect sqlgen.
 		}},
 	}
 
-	ext := "sql"
-	if format == "json" {
-		ext = "json"
+	ext := format
+	if format != "json" && format != "yaml" {
+		ext = "sql"
 	}
 
 	var names []string
@@ -51,9 +51,12 @@ func buildScaffoldedMigrations(t *testing.T, dir, format string, dialect sqlgen.
 		}
 
 		var content string
-		if format == "json" {
+		switch format {
+		case "json":
 			content, err = template.RenderJSON(op)
-		} else {
+		case "yaml":
+			content, err = template.RenderYAML(op)
+		default:
 			content, err = template.RenderSQL(dialect, op)
 		}
 		if err != nil {
@@ -160,7 +163,7 @@ func tableExists(t *testing.T, dbPath, table string) bool {
 // successfully through the real Migrator and reverses correctly — the one
 // thing the golden-comparison unit tests in template_test.go can't catch.
 func TestE2E_SQLite_ScaffoldedMigrationsApplyAndReverse(t *testing.T) {
-	for _, format := range []string{"sql", "json"} {
+	for _, format := range []string{"sql", "json", "yaml"} {
 		t.Run(format, func(t *testing.T) {
 			dir := t.TempDir()
 			dbPath := filepath.Join(dir, "test.db")

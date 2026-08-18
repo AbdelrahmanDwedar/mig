@@ -64,6 +64,10 @@ const jsonMigrationBoilerplate = `{
 }
 `
 
+const yamlMigrationBoilerplate = `down: []
+up: []
+`
+
 func runSetup(driver, dbName, dir string) (created bool, err error) {
 	if _, err := os.Stat("mig.yml"); err == nil {
 		if !jsonOutput {
@@ -112,7 +116,7 @@ func runSetup(driver, dbName, dir string) (created bool, err error) {
   # password: password
   dbname: %s
 migrations:
-  parser: sql # or json -- sets the default format for 'mig create'
+  parser: sql # or json/yaml -- sets the default format for 'mig create'
   dir: %s
 `, dbName, dir)
 	} else {
@@ -124,7 +128,7 @@ migrations:
   password: password
   dbname: %s
 migrations:
-  parser: sql # or json -- sets the default format for 'mig create'
+  parser: sql # or json/yaml -- sets the default format for 'mig create'
   dir: %s
 `, driver, dbName, dir)
 	}
@@ -155,10 +159,10 @@ func resolveFormat(cmd *cobra.Command, formatFlag string, cfg *config.Config) (s
 	}
 
 	switch format {
-	case "sql", "json":
+	case "sql", "json", "yaml":
 		return format, nil
 	default:
-		return "", fmt.Errorf("unsupported format: %q (must be \"sql\" or \"json\")", format)
+		return "", fmt.Errorf("unsupported format: %q (must be \"sql\", \"json\", or \"yaml\")", format)
 	}
 }
 
@@ -175,6 +179,8 @@ func createMigration(name, format string) (string, error) {
 	switch format {
 	case "json":
 		extension, boilerplate = "json", jsonMigrationBoilerplate
+	case "yaml":
+		extension, boilerplate = "yaml", yamlMigrationBoilerplate
 	default:
 		extension, boilerplate = "sql", migrationBoilerplate
 	}
@@ -193,8 +199,8 @@ func createMigration(name, format string) (string, error) {
 // createMigrationFromTemplate scaffolds a migration from a resolved
 // template Op instead of the empty boilerplate, rendering it via the same
 // dir/timestamp/extension conventions as createMigration. dialect may be
-// nil when format is "json" (dialect resolution for JSON migrations
-// happens later, at migrate-time).
+// nil when format is "json" or "yaml" (dialect resolution for those
+// structured formats happens later, at migrate-time).
 func createMigrationFromTemplate(name, format string, op template.Op, dialect sqlgen.Dialect) (string, error) {
 	cfg, err := config.LoadConfig("mig.yml")
 	dir := "migrations"
@@ -207,6 +213,9 @@ func createMigrationFromTemplate(name, format string, op template.Op, dialect sq
 	case "json":
 		extension = "json"
 		content, err = template.RenderJSON(op)
+	case "yaml":
+		extension = "yaml"
+		content, err = template.RenderYAML(op)
 	default:
 		extension = "sql"
 		content, err = template.RenderSQL(dialect, op)
@@ -326,9 +335,9 @@ func NewRootCmd() *cobra.Command {
 			}
 
 			var dialect sqlgen.Dialect
-			if format != "json" {
+			if format == "sql" {
 				if cfg == nil {
-					return fmt.Errorf("--template with --format sql requires a mig.yml to resolve the database dialect (run 'mig setup' first, or use --format json)")
+					return fmt.Errorf("--template with --format sql requires a mig.yml to resolve the database dialect (run 'mig setup' first, or use --format json/yaml)")
 				}
 				dialect, err = sqlgen.New(cfg.Database.Driver)
 				if err != nil {
@@ -340,7 +349,7 @@ func NewRootCmd() *cobra.Command {
 			return printResult(map[string]any{"file": filename}, err, nil)
 		},
 	}
-	createCmd.Flags().StringVar(&formatFlag, "format", "sql", "Migration file format (sql, json)")
+	createCmd.Flags().StringVar(&formatFlag, "format", "sql", "Migration file format (sql, json, yaml)")
 	createCmd.Flags().StringVar(&templateFlag, "template", "", "Scaffold a common op: "+strings.Join(template.SupportedTemplates, "|"))
 	createCmd.Flags().StringVar(&tableFlag, "table", "", "Target table name (all templates)")
 	createCmd.Flags().StringVar(&columnsFlag, "columns", "", `Column spec, e.g. "id:bigint:pk:auto,email:string(255):unique" (create_table, add_column)`)

@@ -4,7 +4,7 @@
 table, adding a column, adding an index, and so on — instead of writing an
 empty migration and filling it in by hand. Pass `--template <op>` plus the
 flags that op needs, and `mig` generates a complete, valid migration file in
-whichever format (`.sql` or `.json`) is already configured.
+whichever format (`.sql`, `.json`, or `.yaml`) is already configured.
 
 ## 1. Overview
 
@@ -16,10 +16,10 @@ so there's no separate scaffolding logic to keep in sync:
   migrate-time render the scaffold — the generated SQL is guaranteed correct
   for your configured driver (Postgres/MySQL/SQLite), not independently
   hand-written text that could drift from what actually gets executed.
-- For **`.json`** output, the same op is serialized straight into the
-  `{"op": ...}` envelope the JSON parser already consumes — dialect
-  resolution still happens later, at migrate-time, exactly as it does for
-  hand-written JSON migrations.
+- For **`.json`**/**`.yaml`** output, the same op is serialized straight
+  into the `{"op": ...}` envelope the JSON/YAML parser already consumes —
+  dialect resolution still happens later, at migrate-time, exactly as it
+  does for hand-written JSON/YAML migrations.
 
 Both the `down` side and the scaffold content are generated automatically —
 you don't need `--format` beyond what `mig create` already resolves (see
@@ -48,7 +48,7 @@ mig create add_users --template create_table \
 
 `add_constraint`/`drop_constraint` and the raw `sql` escape hatch aren't
 scaffoldable templates — write those migrations by hand (or with `--format
-json`, that op directly).
+json`/`--format yaml`, that op directly).
 
 ## 3. Column spec mini-DSL (`--columns`)
 
@@ -122,9 +122,9 @@ following one rule for every template:
   -- TODO: cannot auto-reverse drop_table on "users"; write the down migration manually
   ```
 
-  (In `.json` output this is a schema-valid `{"op": "sql", "query": "-- TODO: ..."}`
-  entry, so the file still parses and applies — the down side is just a
-  no-op comment until you replace it.)
+  (In `.json`/`.yaml` output this is a schema-valid
+  `{"op": "sql", "query": "-- TODO: ..."}` entry, so the file still parses
+  and applies — the down side is just a no-op comment until you replace it.)
 
 ## 6. Worked example
 
@@ -167,6 +167,26 @@ Or with `--format json`:
 }
 ```
 
+Or with `--format yaml`:
+
+```yaml
+up:
+  - op: create_table
+    table: users
+    columns:
+      - name: id
+        type: bigint
+        primary_key: true
+        auto_increment: true
+      - name: email
+        type: string
+        length: 255
+        unique: true
+down:
+  - op: drop_table
+    table: users
+```
+
 ## 7. Errors
 
 Since `.sql` templates render through the real `sqlgen.Dialect`, an op your
@@ -191,4 +211,4 @@ the flag that's missing.
 
 `--template` with `--format sql` requires a `mig.yml` in the current
 directory to resolve the database dialect (`mig setup` first, or pass
-`--format json` if you don't need SQL output yet).
+`--format json`/`--format yaml` if you don't need SQL output yet).
