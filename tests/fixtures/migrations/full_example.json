@@ -1,0 +1,17 @@
+{
+  "up": [
+    {
+      "op": "create_table",
+      "table": "users",
+      "columns": [
+        { "name": "id", "type": "integer", "auto_increment": true, "primary_key": true },
+        { "name": "email", "type": "string", "length": 255, "nullable": false, "unique": true }
+      ]
+    },
+    { "op": "add_column", "table": "users", "column": { "name": "plan", "type": "string", "length": 50, "default": { "literal": "free" } } }
+  ],
+  "down": [
+    { "op": "drop_column", "table": "users", "column": "plan" },
+    { "op": "drop_table", "table": "users", "if_exists": true }
+  ]
+}

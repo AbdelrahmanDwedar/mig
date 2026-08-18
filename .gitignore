@@ -16,7 +16,7 @@
 .vscode/
 
 # Ignore the actual migration database data if needed
-migrations/
+/migrations/
 
 # Binary artifacts from builds
 bin/
