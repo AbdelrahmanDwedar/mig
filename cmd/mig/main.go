@@ -11,6 +11,7 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/db"
 	"github.com/AbdelrahmanDwedar/mig/internal/migrate"
 	"github.com/AbdelrahmanDwedar/mig/internal/parser"
+	"github.com/AbdelrahmanDwedar/mig/internal/scanner"
 	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
 	"github.com/AbdelrahmanDwedar/mig/internal/template"
 	"github.com/manifoldco/promptui"
@@ -262,6 +263,25 @@ func newMigrator() (*migrate.Migrator, error) {
 	return &migrate.Migrator{Driver: driver, Registry: reg, Dir: dir}, nil
 }
 
+// newConnectedDriver loads mig.yml and returns a connected Driver alongside
+// the loaded config. Unlike newMigrator, it doesn't build a migration
+// registry or Migrator — for callers that only need direct database access
+// (e.g. `mig inspect`), that setup is unnecessary work.
+func newConnectedDriver() (db.Driver, *config.Config, error) {
+	cfg, err := config.LoadConfig("mig.yml")
+	if err != nil {
+		return nil, nil, err
+	}
+	driver, err := db.NewDriver(&cfg.Database)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := driver.Connect(); err != nil {
+		return nil, nil, err
+	}
+	return driver, cfg, nil
+}
+
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{Use: "mig", SilenceUsage: true, SilenceErrors: true}
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output machine-readable JSON")
@@ -477,7 +497,29 @@ Note: These flags are mutually exclusive.`,
 		},
 	}
 
-	rootCmd.AddCommand(setupCmd, createCmd, migrateCmd, rollbackCmd, resetCmd, statusCmd, freshCmd)
+	var inspectCmd = &cobra.Command{
+		Use:   "inspect",
+		Short: "Show the live database schema",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			driver, cfg, err := newConnectedDriver()
+			if err != nil {
+				return printResult(nil, err, nil)
+			}
+			defer driver.Close()
+
+			sc, err := scanner.New(cfg.Database.Driver, driver.Conn())
+			if err != nil {
+				return printResult(nil, err, nil)
+			}
+
+			schema, err := sc.Scan(cmd.Context())
+			return printResult(schema, err, func() {
+				fmt.Print(scanner.RenderText(schema))
+			})
+		},
+	}
+
+	rootCmd.AddCommand(setupCmd, createCmd, migrateCmd, rollbackCmd, resetCmd, statusCmd, freshCmd, inspectCmd)
 
 	var refreshCmd = &cobra.Command{
 		Use:   "refresh",

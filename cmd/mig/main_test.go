@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/AbdelrahmanDwedar/mig/internal/config"
+	"github.com/AbdelrahmanDwedar/mig/internal/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -397,6 +398,109 @@ func TestCLI_FullLifecycle(t *testing.T) {
 	out, err = runCLI(t, "reset", "--json")
 	if err != nil {
 		t.Fatalf("reset: %v (%s)", err, out)
+	}
+}
+
+func TestCLI_Inspect(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	if _, err := runCLI(t, "setup", "--driver", "sqlite", "--dbname", "test.db", "--dir", "migrations", "--json"); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	out, err := runCLI(t, "create", "add_widgets", "--format", "json", "--json")
+	if err != nil {
+		t.Fatalf("create: %v (%s)", err, out)
+	}
+	var createResult Result
+	if err := json.Unmarshal([]byte(out), &createResult); err != nil {
+		t.Fatalf("create output not JSON: %v (%s)", err, out)
+	}
+	data, _ := createResult.Data.(map[string]any)
+	filename, _ := data["file"].(string)
+
+	migrationContent := `{
+		"up": [
+			{
+				"op": "create_table",
+				"table": "widgets",
+				"columns": [
+					{"name": "id", "type": "integer", "auto_increment": true, "primary_key": true},
+					{"name": "name", "type": "string", "length": 100, "nullable": false, "unique": true}
+				]
+			}
+		],
+		"down": [{"op": "drop_table", "table": "widgets", "if_exists": true}]
+	}`
+	if err := os.WriteFile(filename, []byte(migrationContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if out, err := runCLI(t, "migrate", "--json"); err != nil {
+		t.Fatalf("migrate: %v (%s)", err, out)
+	}
+
+	// --json path: decode into a scanner.Schema and assert on it, not just
+	// exit code / raw text.
+	out, err = runCLI(t, "inspect", "--json")
+	if err != nil {
+		t.Fatalf("inspect --json: %v (%s)", err, out)
+	}
+	var inspectResult Result
+	if err := json.Unmarshal([]byte(out), &inspectResult); err != nil {
+		t.Fatalf("inspect output not JSON: %v (%s)", err, out)
+	}
+	if !inspectResult.Success {
+		t.Fatalf("inspect did not succeed: %+v", inspectResult)
+	}
+	schemaJSON, err := json.Marshal(inspectResult.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema scanner.Schema
+	if err := json.Unmarshal(schemaJSON, &schema); err != nil {
+		t.Fatalf("decoding scanned schema: %v", err)
+	}
+	widgets, ok := schema.Tables["widgets"]
+	if !ok {
+		t.Fatal("expected widgets table in scanned schema")
+	}
+	var nameCol *scanner.Column
+	for i := range widgets.Columns {
+		if widgets.Columns[i].Name == "name" {
+			nameCol = &widgets.Columns[i]
+		}
+	}
+	if nameCol == nil || !nameCol.Unique || nameCol.Type != "string" || nameCol.Length != 100 {
+		t.Errorf("unexpected name column: %+v", nameCol)
+	}
+
+	// plain-text path: smoke-test that the tree renderer mentions what we
+	// just created.
+	out, err = runCLI(t, "inspect")
+	if err != nil {
+		t.Fatalf("inspect (plain): %v (%s)", err, out)
+	}
+	for _, want := range []string{"widgets", "id", "name", "PK", "AUTO_INCREMENT", "UNIQUE"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected plain inspect output to contain %q, got:\n%s", want, out)
+		}
+	}
+}
+
+func TestCLI_Inspect_MissingConfig(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	out, err := runCLI(t, "inspect", "--json")
+	if err == nil {
+		t.Fatal("expected an error when mig.yml is missing")
+	}
+	var r Result
+	if err := json.Unmarshal([]byte(out), &r); err != nil {
+		t.Fatalf("output not JSON: %v (%s)", err, out)
+	}
+	if r.Success {
+		t.Error("expected Success=false when mig.yml is missing")
 	}
 }
 
