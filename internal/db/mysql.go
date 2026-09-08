@@ -26,6 +26,8 @@ func (d *MySQLDriver) Connect() error {
 
 func (d *MySQLDriver) Close() error { return d.db.Close() }
 
+func (d *MySQLDriver) Conn() *sql.DB { return d.db }
+
 func (d *MySQLDriver) EnsureMigrationsTable() error {
 	_, err := d.db.Exec("CREATE TABLE IF NOT EXISTS _migrations (uuid CHAR(36) PRIMARY KEY, migration VARCHAR(255), batch INTEGER)")
 	return err
