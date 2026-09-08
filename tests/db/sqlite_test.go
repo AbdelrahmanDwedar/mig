@@ -49,6 +49,29 @@ func TestSQLiteDriver_Integration(t *testing.T) {
 	}
 }
 
+func TestSQLiteDriver_Conn(t *testing.T) {
+	dbName := "test_conn.db"
+	defer os.Remove(dbName)
+
+	cfg := &config.DatabaseConfig{Driver: "sqlite", DBName: dbName}
+	driver, err := db.NewDriver(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := driver.Connect(); err != nil {
+		t.Fatal(err)
+	}
+	defer driver.Close()
+
+	conn := driver.Conn()
+	if conn == nil {
+		t.Fatal("expected Conn() to return a non-nil *sql.DB after Connect")
+	}
+	if err := conn.Ping(); err != nil {
+		t.Errorf("expected Conn()'s *sql.DB to be usable, Ping failed: %v", err)
+	}
+}
+
 func TestSQLiteDriver_ApplyMigration_BadSQL(t *testing.T) {
 	dbName := "test_apply_bad_sql.db"
 	defer os.Remove(dbName)

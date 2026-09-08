@@ -37,6 +37,15 @@ func TestPostgresDriver_ConnectClose(t *testing.T) {
 	}
 }
 
+func TestPostgresDriver_Conn(t *testing.T) {
+	d := postgresDriverForTest(t)
+	defer d.Close()
+
+	if d.Conn() == nil {
+		t.Error("expected Conn() to return a non-nil *sql.DB after Connect")
+	}
+}
+
 func TestPostgresDriver_UnreachableServer(t *testing.T) {
 	d := postgresDriverForTest(t)
 	defer d.Close()
