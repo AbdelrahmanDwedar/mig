@@ -262,6 +262,23 @@ Returns every `.sql`/`.json` file in the migrations dir with `Applied` or
 `Pending` — purely a filename-vs-tracking-table diff, doesn't touch schema
 state directly.
 
+## Inspect the live database schema
+
+```bash
+mig inspect --json
+```
+
+Reads the actual database (not the migration files) and returns everything
+in it — tables, columns, indexes, foreign keys, checks, views, triggers,
+sequences — as structured JSON (`mig inspect` with no flag prints a
+human-readable tree instead). Useful for confirming a migration actually
+produced the schema you expect, or for checking what's already there before
+writing a new migration. It does not compare against migration files — it
+only reports what the database currently looks like. See
+[`docs/scanners.md`](scanners.md) for the full output shape and its known
+limitations (e.g. no CHECK constraint visibility on SQLite, single-schema
+scope on Postgres).
+
 ## Workflow: making a schema change end to end
 
 **If the change is one of the 10 supported templates** (the common case —

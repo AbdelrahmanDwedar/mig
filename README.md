@@ -17,6 +17,7 @@ Stop wrestling with complex migration tools. **Mig** gives you a streamlined, dr
 ### ✨ Key Features
 - **Two migration formats:** raw SQL (`+migrate Up`/`Down` directives) or structured **[JSON migrations](docs/json-migrations.md)** — portable column types, indexes, foreign keys, and constraints as data, with a raw-SQL escape hatch for anything else. `.sql` and `.json` files coexist in the same migrations directory.
 - **[Migration templates](docs/templates.md):** scaffold `create_table`, `add_column`, `add_index`, `add_foreign_key`, and more directly via `mig create --template`, rendered as dialect-correct SQL or the equivalent JSON op.
+- **[Schema inspection](docs/scanners.md):** `mig inspect` reads a live database's actual schema — tables, columns, indexes, foreign keys, checks, views, triggers, sequences — as a human-readable tree or `--json`.
 - **Driver-First:** First-class support for **PostgreSQL**, **MySQL**, and **SQLite**.
 - **Dev-Friendly:** Interactive `setup` with sensible defaults.
 - **Advanced Control:** Selective rollback (`--steps`), specific file targeting (`--migration`), and safe `fresh`/`refresh` cycles.
@@ -28,6 +29,7 @@ Stop wrestling with complex migration tools. **Mig** gives you a streamlined, dr
 - [Getting Started](#-getting-started)
 - [Usage](#-usage)
 - [Migration Templates](docs/templates.md)
+- [Schema Inspection](docs/scanners.md)
 - [Configuration](#-configuration)
 - [AI Agent Support](#-ai-agent-support)
 - [Architecture](#-architecture)
@@ -110,6 +112,7 @@ mig migrate
 | `reset` | Rollback *all* applied migrations |
 | `fresh` | Reset the DB and re-run all migrations |
 | `status` | View applied/pending migration list |
+| `inspect` | Show the live database schema (`--json` for structured output) — see [Schema Inspection](docs/scanners.md) |
 
 ---
 

@@ -25,6 +25,8 @@ func (d *PostgresDriver) Connect() error {
 
 func (d *PostgresDriver) Close() error { return d.db.Close() }
 
+func (d *PostgresDriver) Conn() *sql.DB { return d.db }
+
 func (d *PostgresDriver) EnsureMigrationsTable() error {
 	_, err := d.db.Exec("CREATE TABLE IF NOT EXISTS _migrations (uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(), migration TEXT, batch INTEGER)")
 	return err

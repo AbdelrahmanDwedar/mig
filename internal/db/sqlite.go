@@ -25,6 +25,8 @@ func (d *SQLiteDriver) Close() error {
 	return d.db.Close()
 }
 
+func (d *SQLiteDriver) Conn() *sql.DB { return d.db }
+
 func (d *SQLiteDriver) EnsureMigrationsTable() error {
 	_, err := d.db.Exec("CREATE TABLE IF NOT EXISTS _migrations (uuid CHAR(36) PRIMARY KEY, migration TEXT, batch INTEGER)")
 	return err

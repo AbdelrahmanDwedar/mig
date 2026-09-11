@@ -3,6 +3,7 @@ module github.com/AbdelrahmanDwedar/mig
 go 1.24.10
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/compose-spec/compose-go/v2 v2.11.0
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/google/uuid v1.6.0
