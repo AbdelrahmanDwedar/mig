@@ -504,6 +504,81 @@ func TestCLI_Inspect_MissingConfig(t *testing.T) {
 	}
 }
 
+// unreachablePostgresMigYML / unreachableMySQLMigYML point at a port
+// nothing is listening on, matching the convention already used in
+// tests/db/postgres_test.go and tests/db/mysql_test.go: sql.Open for both
+// lib/pq and go-sql-driver/mysql is lazy, so Connect() succeeds but the
+// first real query fails — exactly the shape needed to reach scanner.New +
+// sc.Scan and exercise their error path through the CLI, as opposed to
+// TestCLI_Inspect_MissingConfig, which fails earlier at config load.
+const unreachablePostgresMigYML = `database:
+  driver: postgresql
+  host: 127.0.0.1
+  port: 54329
+  user: user
+  password: password
+  dbname: mig_test
+migrations:
+  dir: migrations
+  parser: json
+`
+
+const unreachableMySQLMigYML = `database:
+  driver: mysql
+  host: 127.0.0.1
+  port: 54329
+  user: user
+  password: password
+  dbname: mig_test
+migrations:
+  dir: migrations
+  parser: json
+`
+
+func TestCLI_Inspect_PostgresScanFailure(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.WriteFile("mig.yml", []byte(unreachablePostgresMigYML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runCLI(t, "inspect", "--json")
+	if err == nil {
+		t.Fatal("expected an error when the scanner can't reach the database")
+	}
+	var r Result
+	if jsonErr := json.Unmarshal([]byte(out), &r); jsonErr != nil {
+		t.Fatalf("output not JSON: %v (%s)", jsonErr, out)
+	}
+	if r.Success {
+		t.Error("expected Success=false when the postgres scanner fails to query")
+	}
+	if r.Error == "" {
+		t.Error("expected a non-empty error message")
+	}
+}
+
+func TestCLI_Inspect_MySQLScanFailure(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.WriteFile("mig.yml", []byte(unreachableMySQLMigYML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runCLI(t, "inspect", "--json")
+	if err == nil {
+		t.Fatal("expected an error when the scanner can't reach the database")
+	}
+	var r Result
+	if jsonErr := json.Unmarshal([]byte(out), &r); jsonErr != nil {
+		t.Fatalf("output not JSON: %v (%s)", jsonErr, out)
+	}
+	if r.Success {
+		t.Error("expected Success=false when the mysql scanner fails to query")
+	}
+	if r.Error == "" {
+		t.Error("expected a non-empty error message")
+	}
+}
+
 func TestCLI_MigrateWithoutSetup(t *testing.T) {
 	t.Chdir(t.TempDir())
 
