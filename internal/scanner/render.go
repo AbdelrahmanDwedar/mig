@@ -4,91 +4,124 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
 )
 
-// RenderText renders a Schema as a human-readable tree, the default (non
-// --json) output of `mig inspect`.
+// RenderText renders a Schema as a human-readable tree (├── / └──
+// connectors, matching the style of `mig`'s own cobra --help command tree),
+// the default (non --json) output of `mig inspect`.
 func RenderText(schema *Schema) string {
 	var b strings.Builder
 
 	tableNames := sortedKeys(schema.Tables)
 	fmt.Fprintf(&b, "Tables (%d)\n", len(tableNames))
-	for _, name := range tableNames {
-		renderTable(&b, schema.Tables[name])
+	for i, name := range tableNames {
+		renderTable(&b, "", isLastIndex(i, len(tableNames)), schema.Tables[name])
 	}
 
 	if len(schema.Views) > 0 {
 		names := sortedKeys(schema.Views)
 		fmt.Fprintf(&b, "\nViews (%d)\n", len(names))
-		for _, name := range names {
+		for i, name := range names {
 			v := schema.Views[name]
+			label := v.Name
 			if v.Definition != "" {
-				fmt.Fprintf(&b, "  %s — %s\n", v.Name, oneLine(v.Definition))
-			} else {
-				fmt.Fprintf(&b, "  %s\n", v.Name)
+				label = fmt.Sprintf("%s — %s", v.Name, oneLine(v.Definition))
 			}
+			writeLine(&b, "", isLastIndex(i, len(names)), label)
 		}
 	}
 
 	if len(schema.Triggers) > 0 {
 		names := sortedKeys(schema.Triggers)
 		fmt.Fprintf(&b, "\nTriggers (%d)\n", len(names))
-		for _, name := range names {
+		for i, name := range names {
 			t := schema.Triggers[name]
-			fmt.Fprintf(&b, "  %s (%s, %s %s)\n", t.Name, t.Table, t.Timing, t.Event)
+			writeLine(&b, "", isLastIndex(i, len(names)), fmt.Sprintf("%s (%s, %s %s)", t.Name, t.Table, t.Timing, t.Event))
 		}
 	}
 
 	if len(schema.Sequences) > 0 {
 		names := sortedKeys(schema.Sequences)
 		fmt.Fprintf(&b, "\nSequences (%d)\n", len(names))
-		for _, name := range names {
+		for i, name := range names {
 			s := schema.Sequences[name]
-			fmt.Fprintf(&b, "  %s (start %d, increment %d)\n", s.Name, s.Start, s.Increment)
+			writeLine(&b, "", isLastIndex(i, len(names)), fmt.Sprintf("%s (start %d, increment %d)", s.Name, s.Start, s.Increment))
 		}
 	}
 
 	return b.String()
 }
 
-func renderTable(b *strings.Builder, t *Table) {
-	fmt.Fprintf(b, "  %s\n", t.Name)
+// renderTable writes a table as a tree node with four branches (Columns,
+// Indexes, Foreign Keys, Checks), each fanning out into its own leaves.
+func renderTable(b *strings.Builder, prefix string, isLast bool, t *Table) {
+	writeLine(b, prefix, isLast, t.Name)
+	tablePrefix := childPrefix(prefix, isLast)
 
-	fmt.Fprintf(b, "    Columns\n")
-	for _, c := range t.Columns {
-		fmt.Fprintf(b, "      %s\n", renderColumn(c))
+	sections := []struct {
+		label string
+		lines []string
+	}{
+		{"Columns", columnLines(t.Columns)},
+		{"Indexes", indexLines(t.Indexes)},
+		{"Foreign Keys", fkLines(t.ForeignKeys)},
+		{"Checks", checkLines(t.Checks)},
 	}
 
-	fmt.Fprintf(b, "    Indexes\n")
-	if len(t.Indexes) == 0 {
-		fmt.Fprintf(b, "      (none)\n")
-	}
-	for _, idx := range t.Indexes {
-		fmt.Fprintf(b, "      %s\n", renderIndex(idx))
-	}
+	for i, sec := range sections {
+		secIsLast := isLastIndex(i, len(sections))
+		writeLine(b, tablePrefix, secIsLast, sec.label)
+		secPrefix := childPrefix(tablePrefix, secIsLast)
 
-	fmt.Fprintf(b, "    Foreign Keys\n")
-	if len(t.ForeignKeys) == 0 {
-		fmt.Fprintf(b, "      (none)\n")
+		lines := sec.lines
+		if len(lines) == 0 {
+			lines = []string{"(none)"}
+		}
+		for j, line := range lines {
+			writeLine(b, secPrefix, isLastIndex(j, len(lines)), line)
+		}
 	}
-	for _, fk := range t.ForeignKeys {
-		fmt.Fprintf(b, "      %s (%s) -> %s (%s)", fkLabel(fk.Name), strings.Join(fk.Columns, ", "), fk.RefTable, strings.Join(fk.RefColumns, ", "))
+}
+
+func columnLines(cols []Column) []string {
+	lines := make([]string, len(cols))
+	for i, c := range cols {
+		lines[i] = renderColumn(c)
+	}
+	return lines
+}
+
+func indexLines(idxs []Index) []string {
+	lines := make([]string, len(idxs))
+	for i, idx := range idxs {
+		lines[i] = renderIndex(idx)
+	}
+	return lines
+}
+
+func fkLines(fks []sqlgen.ForeignKey) []string {
+	lines := make([]string, len(fks))
+	for i, fk := range fks {
+		line := fmt.Sprintf("%s (%s) -> %s (%s)", fkLabel(fk.Name), strings.Join(fk.Columns, ", "), fk.RefTable, strings.Join(fk.RefColumns, ", "))
 		if fk.OnDelete != "" {
-			fmt.Fprintf(b, " ON DELETE %s", fk.OnDelete)
+			line += " ON DELETE " + fk.OnDelete
 		}
 		if fk.OnUpdate != "" {
-			fmt.Fprintf(b, " ON UPDATE %s", fk.OnUpdate)
+			line += " ON UPDATE " + fk.OnUpdate
 		}
-		b.WriteString("\n")
+		lines[i] = line
 	}
+	return lines
+}
 
-	fmt.Fprintf(b, "    Checks\n")
-	if len(t.Checks) == 0 {
-		fmt.Fprintf(b, "      (none)\n")
+func checkLines(checks []sqlgen.Check) []string {
+	lines := make([]string, len(checks))
+	for i, chk := range checks {
+		lines[i] = fmt.Sprintf("%s (%s)", fkLabel(chk.Name), chk.Expr)
 	}
-	for _, chk := range t.Checks {
-		fmt.Fprintf(b, "      %s (%s)\n", fkLabel(chk.Name), chk.Expr)
-	}
+	return lines
 }
 
 func renderColumn(c Column) string {
@@ -163,4 +196,29 @@ func sortedKeys[V any](m map[string]V) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// --- tree-drawing helpers ---
+
+func isLastIndex(i, n int) bool { return i == n-1 }
+
+func treeConnector(isLast bool) string {
+	if isLast {
+		return "└── "
+	}
+	return "├── "
+}
+
+// childPrefix computes the prefix for a node's children: continuation bars
+// (│) under every ancestor that still has siblings below it, blank
+// indentation under one that doesn't.
+func childPrefix(prefix string, isLast bool) string {
+	if isLast {
+		return prefix + "    "
+	}
+	return prefix + "│   "
+}
+
+func writeLine(b *strings.Builder, prefix string, isLast bool, label string) {
+	fmt.Fprintf(b, "%s%s%s\n", prefix, treeConnector(isLast), label)
 }
