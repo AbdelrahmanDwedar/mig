@@ -37,6 +37,15 @@ func TestMySQLDriver_ConnectClose(t *testing.T) {
 	}
 }
 
+func TestMySQLDriver_Conn(t *testing.T) {
+	d := mysqlDriverForTest(t)
+	defer d.Close()
+
+	if d.Conn() == nil {
+		t.Error("expected Conn() to return a non-nil *sql.DB after Connect")
+	}
+}
+
 func TestMySQLDriver_UnreachableServer(t *testing.T) {
 	d := mysqlDriverForTest(t)
 	defer d.Close()

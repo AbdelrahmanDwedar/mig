@@ -1,10 +1,17 @@
 package sqlgen
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
 
-// nativeTypeTemplates holds the per-dialect SQL type template for each
-// portable abstract type. Templates containing "%d" are filled in with
-// length/precision/scale by nativeColumnType.
+var typeOrder = []string{
+	"string", "text", "integer", "bigint", "boolean",
+	"uuid", "timestamp", "date", "decimal", "json", "float",
+}
+
 type nativeTypeTemplates struct {
 	Postgres string
 	MySQL    string
@@ -31,15 +38,11 @@ const (
 	defaultDecimalScale = 0
 )
 
-// IsValidAbstractType reports whether t is one of the portable abstract
-// column types known to typeMap.
 func IsValidAbstractType(t string) bool {
 	_, ok := typeMap[t]
 	return ok
 }
 
-// NativeColumnType resolves an abstract column type to its native SQL
-// rendering for the given dialect name ("postgresql", "mysql", "sqlite").
 func NativeColumnType(dialectName, abstractType string, length, precision, scale int) (string, error) {
 	tmpl, ok := typeMap[abstractType]
 	if !ok {
@@ -75,4 +78,60 @@ func NativeColumnType(dialectName, abstractType string, length, precision, scale
 	default:
 		return t, nil
 	}
+}
+
+func AbstractType(dialectName, nativeType string) (abstractType string, length, precision, scale int, ok bool) {
+	native := strings.TrimSpace(nativeType)
+
+	for _, abstract := range typeOrder {
+		tmpl, exists := typeMap[abstract]
+		if !exists {
+			continue
+		}
+
+		var pattern string
+		switch dialectName {
+		case "postgresql":
+			pattern = tmpl.Postgres
+		case "mysql":
+			pattern = tmpl.MySQL
+		case "sqlite":
+			pattern = tmpl.SQLite
+		default:
+			return "", 0, 0, 0, false
+		}
+
+		m := templateRegexp(pattern).FindStringSubmatch(native)
+		if m == nil {
+			continue
+		}
+
+		switch abstract {
+		case "string":
+			length = defaultStringLength
+			if len(m) > 1 && m[1] != "" {
+				if n, err := strconv.Atoi(m[1]); err == nil {
+					length = n
+				}
+			}
+		case "decimal":
+			precision, scale = defaultDecimalPrec, defaultDecimalScale
+			if len(m) > 2 {
+				if n, err := strconv.Atoi(m[1]); err == nil {
+					precision = n
+				}
+				if n, err := strconv.Atoi(m[2]); err == nil {
+					scale = n
+				}
+			}
+		}
+		return abstract, length, precision, scale, true
+	}
+	return "", 0, 0, 0, false
+}
+
+func templateRegexp(tmpl string) *regexp.Regexp {
+	escaped := regexp.QuoteMeta(tmpl)
+	escaped = strings.ReplaceAll(escaped, `%d`, `(\d+)`)
+	return regexp.MustCompile(`(?i)^` + escaped + `$`)
 }

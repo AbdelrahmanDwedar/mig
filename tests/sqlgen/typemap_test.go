@@ -88,3 +88,89 @@ func TestNativeColumnType_UnknownDialect(t *testing.T) {
 		t.Error("expected error for unknown dialect, got nil")
 	}
 }
+
+func TestAbstractType_RoundTrip(t *testing.T) {
+	dialects := []string{"postgresql", "mysql", "sqlite"}
+	abstractTypes := []struct {
+		abstract        string
+		length          int
+		prec, scale     int
+		sqliteCollision string // if non-empty, sqlite is expected to resolve to this instead
+	}{
+		{abstract: "string", length: 100},
+		{abstract: "text"},
+		{abstract: "integer"},
+		{abstract: "bigint", sqliteCollision: "integer"},
+		{abstract: "boolean"},
+		{abstract: "uuid", sqliteCollision: "text"},
+		{abstract: "timestamp"},
+		{abstract: "date"},
+		{abstract: "decimal", prec: 10, scale: 2},
+		{abstract: "json", sqliteCollision: "text"},
+		{abstract: "float"},
+	}
+
+	for _, dialect := range dialects {
+		for _, at := range abstractTypes {
+			native, err := sqlgen.NativeColumnType(dialect, at.abstract, at.length, at.prec, at.scale)
+			if err != nil {
+				t.Fatalf("NativeColumnType(%q, %q): %v", dialect, at.abstract, err)
+			}
+
+			gotAbstract, gotLen, gotPrec, gotScale, ok := sqlgen.AbstractType(dialect, native)
+			if !ok {
+				t.Errorf("AbstractType(%q, %q): expected a match, got none", dialect, native)
+				continue
+			}
+
+			want := at.abstract
+			if dialect == "sqlite" && at.sqliteCollision != "" {
+				want = at.sqliteCollision
+			}
+			if gotAbstract != want {
+				t.Errorf("AbstractType(%q, %q) = %q, want %q", dialect, native, gotAbstract, want)
+			}
+
+			switch at.abstract {
+			case "string":
+				if gotLen != at.length {
+					t.Errorf("AbstractType(%q, %q) length = %d, want %d", dialect, native, gotLen, at.length)
+				}
+			case "decimal":
+				if gotPrec != at.prec || gotScale != at.scale {
+					t.Errorf("AbstractType(%q, %q) = (%d,%d), want (%d,%d)", dialect, native, gotPrec, gotScale, at.prec, at.scale)
+				}
+			}
+		}
+	}
+}
+
+func TestAbstractType_DefaultLength(t *testing.T) {
+	abstract, length, _, _, ok := sqlgen.AbstractType("postgresql", "VARCHAR(255)")
+	if !ok || abstract != "string" || length != 255 {
+		t.Errorf("AbstractType(postgresql, VARCHAR(255)) = (%q, %d, ok=%v), want (string, 255, true)", abstract, length, ok)
+	}
+}
+
+func TestAbstractType_CaseInsensitive(t *testing.T) {
+	if _, _, _, _, ok := sqlgen.AbstractType("postgresql", "varchar(50)"); !ok {
+		t.Error("expected lowercase native type to still match")
+	}
+}
+
+func TestAbstractType_NoMatch(t *testing.T) {
+	cases := []struct {
+		dialect string
+		native  string
+	}{
+		{"postgresql", "hstore"},
+		{"mysql", "ENUM('a','b')"},
+		{"sqlite", "BLOB"},
+		{"oracle", "VARCHAR(10)"}, // unknown dialect entirely
+	}
+	for _, c := range cases {
+		if _, _, _, _, ok := sqlgen.AbstractType(c.dialect, c.native); ok {
+			t.Errorf("AbstractType(%q, %q): expected ok=false, got true", c.dialect, c.native)
+		}
+	}
+}
