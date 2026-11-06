@@ -7,23 +7,11 @@ import (
 	"strings"
 )
 
-// typeOrder fixes the priority in which abstract types are tried when
-// reverse-mapping a native type via AbstractType. Order matters because
-// SQLite's typeMap templates collide: "bigint" and "integer" both render as
-// INTEGER, and "uuid"/"json"/"text" all render as TEXT. Earlier entries win,
-// so e.g. a bare SQLite "INTEGER" column resolves to "integer" (not
-// "bigint") and a bare "TEXT" column resolves to "text" (not "uuid"/"json") —
-// SQLite's type affinity genuinely cannot distinguish these, so this is a
-// best-effort default, not a guarantee of round-tripping the original
-// abstract type.
 var typeOrder = []string{
 	"string", "text", "integer", "bigint", "boolean",
 	"uuid", "timestamp", "date", "decimal", "json", "float",
 }
 
-// nativeTypeTemplates holds the per-dialect SQL type template for each
-// portable abstract type. Templates containing "%d" are filled in with
-// length/precision/scale by nativeColumnType.
 type nativeTypeTemplates struct {
 	Postgres string
 	MySQL    string
@@ -50,15 +38,11 @@ const (
 	defaultDecimalScale = 0
 )
 
-// IsValidAbstractType reports whether t is one of the portable abstract
-// column types known to typeMap.
 func IsValidAbstractType(t string) bool {
 	_, ok := typeMap[t]
 	return ok
 }
 
-// NativeColumnType resolves an abstract column type to its native SQL
-// rendering for the given dialect name ("postgresql", "mysql", "sqlite").
 func NativeColumnType(dialectName, abstractType string, length, precision, scale int) (string, error) {
 	tmpl, ok := typeMap[abstractType]
 	if !ok {
@@ -96,15 +80,6 @@ func NativeColumnType(dialectName, abstractType string, length, precision, scale
 	}
 }
 
-// AbstractType reverse-maps a native SQL column type as reported by a
-// database catalog (e.g. "VARCHAR(255)", "NUMERIC(10,2)", "INT") back to
-// mig's portable abstract type vocabulary. It is the inverse of
-// NativeColumnType, built off the same typeMap table.
-//
-// ok is false when nativeType has no known abstract equivalent (e.g. a
-// dialect-specific type like Postgres's hstore, a MySQL ENUM(...), or an
-// unrecognized type) — callers should fall back to preserving the raw
-// native type string rather than guessing.
 func AbstractType(dialectName, nativeType string) (abstractType string, length, precision, scale int, ok bool) {
 	native := strings.TrimSpace(nativeType)
 
@@ -155,9 +130,6 @@ func AbstractType(dialectName, nativeType string) (abstractType string, length, 
 	return "", 0, 0, 0, false
 }
 
-// templateRegexp converts a NativeColumnType template like "VARCHAR(%d)" or
-// "NUMERIC(%d,%d)" into a case-insensitive regexp that captures each "%d"
-// placeholder as a numeric group, anchored to match the whole string.
 func templateRegexp(tmpl string) *regexp.Regexp {
 	escaped := regexp.QuoteMeta(tmpl)
 	escaped = strings.ReplaceAll(escaped, `%d`, `(\d+)`)

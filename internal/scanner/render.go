@@ -8,9 +8,6 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
 )
 
-// RenderText renders a Schema as a human-readable tree (├── / └──
-// connectors, matching the style of `mig`'s own cobra --help command tree),
-// the default (non --json) output of `mig inspect`.
 func RenderText(schema *Schema) string {
 	var b strings.Builder
 
@@ -54,8 +51,6 @@ func RenderText(schema *Schema) string {
 	return b.String()
 }
 
-// renderTable writes a table as a tree node with four branches (Columns,
-// Indexes, Foreign Keys, Checks), each fanning out into its own leaves.
 func renderTable(b *strings.Builder, prefix string, isLast bool, t *Table) {
 	writeLine(b, prefix, isLast, t.Name)
 	tablePrefix := childPrefix(prefix, isLast)
@@ -209,9 +204,6 @@ func treeConnector(isLast bool) string {
 	return "├── "
 }
 
-// childPrefix computes the prefix for a node's children: continuation bars
-// (│) under every ancestor that still has siblings below it, blank
-// indentation under one that doesn't.
 func childPrefix(prefix string, isLast bool) string {
 	if isLast {
 		return prefix + "    "

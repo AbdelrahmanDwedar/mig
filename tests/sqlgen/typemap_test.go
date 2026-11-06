@@ -89,12 +89,6 @@ func TestNativeColumnType_UnknownDialect(t *testing.T) {
 	}
 }
 
-// TestAbstractType_RoundTrip checks that every abstract type in typeMap
-// reverse-maps back to itself (with length/precision/scale preserved) for
-// every dialect, EXCEPT the SQLite collisions documented on typeOrder
-// (bigint/integer and uuid/json/text all render as the same native SQLite
-// type, so they cannot be told apart on the way back — those are asserted
-// separately below instead of expecting a self round-trip).
 func TestAbstractType_RoundTrip(t *testing.T) {
 	dialects := []string{"postgresql", "mysql", "sqlite"}
 	abstractTypes := []struct {
@@ -164,11 +158,6 @@ func TestAbstractType_CaseInsensitive(t *testing.T) {
 	}
 }
 
-// TestAbstractType_NoMatch documents the raw-native fallback path: a type
-// with no abstract equivalent (a dialect-specific extension like Postgres's
-// hstore, or a MySQL ENUM(...)) should report ok=false rather than
-// mis-mapping to something close, so scanner callers know to preserve the
-// raw native type string instead of guessing.
 func TestAbstractType_NoMatch(t *testing.T) {
 	cases := []struct {
 		dialect string

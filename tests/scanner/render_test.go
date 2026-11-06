@@ -8,10 +8,6 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
 )
 
-// TestRenderText_MentionsEveryObject builds a Schema with one of every
-// object kind (a composite-PK table, a dialect-specific index, a view, a
-// trigger, a sequence) and asserts RenderText doesn't panic and doesn't
-// silently drop any of them from the rendered output.
 func TestRenderText_MentionsEveryObject(t *testing.T) {
 	nullable := false
 	schema := &scanner.Schema{

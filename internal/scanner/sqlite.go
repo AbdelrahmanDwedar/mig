@@ -10,10 +10,6 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
 )
 
-// sqliteScanner reads schema via sqlite_master and the PRAGMA family
-// (table_info, index_list, index_info, foreign_key_list). SQLite has no
-// user-facing sequences (Scan always returns an empty Sequences map) and no
-// PRAGMA for CHECK constraints, so Table.Checks is always empty for now —
 // see docs/scanners.md's limitations section.
 type sqliteScanner struct {
 	db *sql.DB

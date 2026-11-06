@@ -12,9 +12,6 @@ import (
 
 const pgDefaultVarcharLen = 255
 
-// postgresScanner reads schema from pg_catalog/information_schema, scoped
-// to the "public" schema (multi-schema support is a known limitation — see
-// docs/scanners.md).
 type postgresScanner struct {
 	db *sql.DB
 }
@@ -120,12 +117,6 @@ func (s *postgresScanner) primaryKeyColumns(ctx context.Context, table string) (
 	return pks, rows.Err()
 }
 
-// pgNativeType reconstructs the native type string sqlgen.NativeColumnType
-// would render for this column from Postgres's information_schema
-// representation, so it can be resolved back to an abstract type via
-// sqlgen.AbstractType. ok is false for types with no portable equivalent
-// (arrays, enums, domains, and other Postgres-specific types) — callers
-// fall back to the raw udt_name/data_type.
 func pgNativeType(dataType string, charLen, numPrec, numScale sql.NullInt64) (string, bool) {
 	switch dataType {
 	case "character varying":
@@ -229,14 +220,6 @@ func (s *postgresScanner) scanColumns(ctx context.Context, table string, pks, un
 	return cols, rows.Err()
 }
 
-// scanIndexes classifies each of the table's non-PK indexes into either a
-// single-column-uniqueness fact folded onto the owning Column (uniqueCols)
-// or a displayed Index entry. A single-column unique index only folds into
-// Column.Unique when it's a plain btree index with no partial predicate —
-// otherwise folding it would silently drop the Method/Partial detail the
-// user actually cares about seeing (see the "different databases have
-// different index features" rationale in docs/scanners.md), so it's shown
-// as an Index instead.
 func (s *postgresScanner) scanIndexes(ctx context.Context, table string) (map[string]bool, []Index, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT
@@ -339,9 +322,6 @@ func (s *postgresScanner) scanForeignKeys(ctx context.Context, table string) ([]
 	return fks, rows.Err()
 }
 
-// pgConstraintAction maps a pg_constraint confupdtype/confdeltype char to
-// the referential action keyword; returns "" for 'a' (NO ACTION), the
-// implicit default not worth rendering explicitly.
 func pgConstraintAction(c rune) string {
 	switch c {
 	case 'r':
@@ -380,8 +360,6 @@ func (s *postgresScanner) scanChecks(ctx context.Context, table string) ([]sqlge
 	return checks, rows.Err()
 }
 
-// pgCheckExpr strips pg_get_constraintdef's "CHECK (...)" wrapper, leaving
-// just the inner expression (Check.Expr's expected shape).
 func pgCheckExpr(def string) string {
 	const prefix, suffix = "CHECK (", ")"
 	if strings.HasPrefix(def, prefix) && strings.HasSuffix(def, suffix) {
