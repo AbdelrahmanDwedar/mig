@@ -7,6 +7,7 @@ import (
 
 	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
 	"github.com/AbdelrahmanDwedar/mig/internal/template"
+	"github.com/AbdelrahmanDwedar/mig/internal/yamlconv"
 )
 
 func TestBuildOp_UnknownTemplate(t *testing.T) {
@@ -304,6 +305,64 @@ func TestRenderJSON_RoundTripsThroughBuildStatement(t *testing.T) {
 		}
 		if strings.Join(jsonDownStmts, ";") != strings.Join(directDownStmts, ";") {
 			t.Errorf("%s: JSON-path down statements differ from direct dialect call:\njson:   %v\ndirect: %v", driver, jsonDownStmts, directDownStmts)
+		}
+	}
+}
+
+func TestRenderYAML_RoundTripsThroughBuildStatement(t *testing.T) {
+	op, err := template.BuildOp("create_table", template.Flags{
+		Table: "users", Columns: "id:bigint:pk:auto,email:string(255):unique",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	content, err := template.RenderYAML(op)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jsonBytes, err := yamlconv.YAMLToJSON([]byte(content))
+	if err != nil {
+		t.Fatalf("RenderYAML produced invalid YAML: %v\n%s", err, content)
+	}
+
+	var migration sqlgen.Migration
+	if err := json.Unmarshal(jsonBytes, &migration); err != nil {
+		t.Fatalf("RenderYAML did not round-trip to a valid migration envelope: %v\n%s", err, content)
+	}
+	if len(migration.Up) != 1 || len(migration.Down) != 1 {
+		t.Fatalf("expected exactly one up op and one down op, got up=%d down=%d", len(migration.Up), len(migration.Down))
+	}
+
+	for _, driver := range []string{"postgresql", "mysql", "sqlite"} {
+		dialect, err := sqlgen.New(driver)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		yamlUpStmts, err := sqlgen.BuildStatement(dialect, migration.Up[0])
+		if err != nil {
+			t.Fatalf("%s: BuildStatement(up) failed: %v", driver, err)
+		}
+		directUpStmts, err := dialect.CreateTable(op.Up.(sqlgen.CreateTableOp))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Join(yamlUpStmts, ";") != strings.Join(directUpStmts, ";") {
+			t.Errorf("%s: YAML-path up statements differ from direct RenderSQL statements:\nyaml:   %v\ndirect: %v", driver, yamlUpStmts, directUpStmts)
+		}
+
+		yamlDownStmts, err := sqlgen.BuildStatement(dialect, migration.Down[0])
+		if err != nil {
+			t.Fatalf("%s: BuildStatement(down) failed: %v", driver, err)
+		}
+		directDownStmts, err := dialect.DropTable(sqlgen.DropTableOp{Table: "users"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Join(yamlDownStmts, ";") != strings.Join(directDownStmts, ";") {
+			t.Errorf("%s: YAML-path down statements differ from direct dialect call:\nyaml:   %v\ndirect: %v", driver, yamlDownStmts, directDownStmts)
 		}
 	}
 }

@@ -66,9 +66,10 @@ sequenceDiagram
 - **`internal/config`**: Loads `mig.yml` and merges with environment variables.
 - **`internal/db`**: Driver interfaces and implementations for PostgreSQL, MySQL, and SQLite.
 - **`internal/migrate`**: Orchestrates migration lifecycle (migrate, rollback, reset, status).
-- **`internal/parser`**: Handles migration file parsing (via `Parser` interface), dispatched by file extension through a `Registry` (`.sql`, `.json`).
-- **`internal/sqlgen`**: Portable op structs (`CreateTableOp`, `AddColumnOp`, ...) and the per-dialect `Dialect` interface (Postgres/MySQL/SQLite) that renders them to native SQL — the shared backing for JSON migrations and templates alike.
+- **`internal/parser`**: Handles migration file parsing (via `Parser` interface), dispatched by file extension through a `Registry` (`.sql`, `.json`, `.yaml`/`.yml`).
+- **`internal/sqlgen`**: Portable op structs (`CreateTableOp`, `AddColumnOp`, ...) and the per-dialect `Dialect` interface (Postgres/MySQL/SQLite) that renders them to native SQL — the shared backing for JSON/YAML migrations and templates alike.
 - **`internal/template`**: Scaffolds common ops (see [docs/templates.md](docs/templates.md)) for `mig create --template`, rendering via the same `sqlgen.Dialect` methods used at migrate-time.
+- **`internal/yamlconv`**: Converts between YAML and JSON byte representations, letting YAML migrations and the `--format yaml` template renderer reuse the JSON-based `sqlgen` op machinery unchanged.
 
 ## Deployment Pipeline
 Mig uses a custom CI/CD pipeline built with GitHub Actions and **nfpm**:

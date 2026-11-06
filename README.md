@@ -15,7 +15,7 @@
 Stop wrestling with complex migration tools. **Mig** gives you a streamlined, driver-based approach to managing your database schema, no matter the language you use. 
 
 ### ✨ Key Features
-- **Two migration formats:** raw SQL (`+migrate Up`/`Down` directives) or structured **[JSON migrations](docs/json-migrations.md)** — portable column types, indexes, foreign keys, and constraints as data, with a raw-SQL escape hatch for anything else. `.sql` and `.json` files coexist in the same migrations directory.
+- **Three migration formats:** raw SQL (`+migrate Up`/`Down` directives) or structured data as **[JSON](docs/json-migrations.md)** or **[YAML](docs/yaml-migrations.md)** — portable column types, indexes, foreign keys, and constraints as data, with a raw-SQL escape hatch for anything else. `.sql`, `.json`, and `.yaml`/`.yml` files coexist in the same migrations directory.
 - **[Migration templates](docs/templates.md):** scaffold `create_table`, `add_column`, `add_index`, `add_foreign_key`, and more directly via `mig create --template`, rendered as dialect-correct SQL or the equivalent JSON op.
 - **Driver-First:** First-class support for **PostgreSQL**, **MySQL**, and **SQLite**.
 - **Dev-Friendly:** Interactive `setup` with sensible defaults.
@@ -148,7 +148,7 @@ database:
   password: ${DB_PASSWORD:?database password is required}
   dbname: ${DB_NAME:-mydatabase}
 migrations:
-  parser: sql   # or json -- sets the default format for `mig create`; see docs/json-migrations.md
+  parser: sql   # or json/yaml -- sets the default format for `mig create`; see docs/json-migrations.md, docs/yaml-migrations.md
   dir: migrations
 ```
 

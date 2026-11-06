@@ -25,21 +25,21 @@ func (p *JSONParser) Parse(content string) (up, down string, err error) {
 		return "", "", fmt.Errorf("invalid JSON migration: %w", err)
 	}
 
-	up, err = p.buildSection(migration.Up)
+	up, err = buildSection(p.Dialect, migration.Up)
 	if err != nil {
 		return "", "", fmt.Errorf("up: %w", err)
 	}
-	down, err = p.buildSection(migration.Down)
+	down, err = buildSection(p.Dialect, migration.Down)
 	if err != nil {
 		return "", "", fmt.Errorf("down: %w", err)
 	}
 	return up, down, nil
 }
 
-func (p *JSONParser) buildSection(ops []json.RawMessage) (string, error) {
+func buildSection(dialect sqlgen.Dialect, ops []json.RawMessage) (string, error) {
 	var statements []string
 	for i, op := range ops {
-		stmts, err := sqlgen.BuildStatement(p.Dialect, op)
+		stmts, err := sqlgen.BuildStatement(dialect, op)
 		if err != nil {
 			return "", fmt.Errorf("op %d: %w", i, err)
 		}

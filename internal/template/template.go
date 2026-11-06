@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/AbdelrahmanDwedar/mig/internal/sqlgen"
+	"github.com/AbdelrahmanDwedar/mig/internal/yamlconv"
 )
 
 // Op is the result of resolving a --template invocation: a discriminator
@@ -267,6 +268,36 @@ func RenderJSON(op Op) (string, error) {
 		return "", err
 	}
 	return string(b) + "\n", nil
+}
+
+// RenderYAML serializes op and its derived down side into the same
+// {"up":[...],"down":[...]} envelope as RenderJSON, written as YAML. No
+// dialect is needed here — dialect resolution for YAML migrations happens
+// later, at migrate-time.
+func RenderYAML(op Op) (string, error) {
+	upRaw, err := marshalOp(op)
+	if err != nil {
+		return "", fmt.Errorf("up: %w", err)
+	}
+	downRaw, err := marshalOp(Down(op))
+	if err != nil {
+		return "", fmt.Errorf("down: %w", err)
+	}
+
+	envelope := struct {
+		Up   []json.RawMessage `json:"up"`
+		Down []json.RawMessage `json:"down"`
+	}{Up: []json.RawMessage{upRaw}, Down: []json.RawMessage{downRaw}}
+
+	b, err := json.Marshal(envelope)
+	if err != nil {
+		return "", err
+	}
+	y, err := yamlconv.JSONToYAML(b)
+	if err != nil {
+		return "", err
+	}
+	return string(y), nil
 }
 
 func marshalOp(op Op) (json.RawMessage, error) {
