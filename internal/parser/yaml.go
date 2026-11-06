@@ -8,10 +8,6 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/yamlconv"
 )
 
-// YAMLParser implements Parser for the YAML migration language: the same
-// {"up": [...], "down": [...]} envelope of structured ops as the JSON
-// language, written as YAML. It converts to JSON and reuses the exact same
-// sqlgen op machinery as JSONParser.
 type YAMLParser struct {
 	Dialect sqlgen.Dialect
 }

@@ -1,9 +1,3 @@
-// Package template scaffolds common migration operations (create table,
-// add column, add index, ...) for `mig create --template`. It builds on
-// the same op vocabulary and Dialect abstraction the JSON migration
-// language uses (internal/sqlgen), so scaffolded SQL is rendered via the
-// exact Dialect methods invoked at migrate-time, and scaffolded JSON is
-// the same {"op": ...} envelope the JSON parser consumes.
 package template
 
 import (
@@ -15,15 +9,11 @@ import (
 	"github.com/AbdelrahmanDwedar/mig/internal/yamlconv"
 )
 
-// Op is the result of resolving a --template invocation: a discriminator
-// matching sqlgen's JSON "op" values, plus the up-direction struct.
 type Op struct {
 	Kind string
 	Up   any
 }
 
-// Flags carries the raw CLI flag values BuildOp consults. Only the subset
-// relevant to a given template's Kind need be set.
 type Flags struct {
 	Table        string
 	Columns      string
@@ -41,7 +31,6 @@ type Flags struct {
 	IfExists     bool
 }
 
-// SupportedTemplates lists the template kinds `mig create --template` accepts.
 var SupportedTemplates = []string{
 	"create_table", "drop_table",
 	"add_column", "drop_column",
@@ -50,7 +39,6 @@ var SupportedTemplates = []string{
 	"add_foreign_key", "drop_foreign_key",
 }
 
-// IsSupported reports whether kind is a recognized template.
 func IsSupported(kind string) bool {
 	for _, k := range SupportedTemplates {
 		if k == kind {
@@ -60,8 +48,6 @@ func IsSupported(kind string) bool {
 	return false
 }
 
-// BuildOp validates kind and the flags required for it, then constructs the
-// matching sqlgen op struct describing the "up" direction.
 func BuildOp(kind string, f Flags) (Op, error) {
 	if !IsSupported(kind) {
 		return Op{}, fmt.Errorf("unknown template %q (supported: %s)", kind, strings.Join(SupportedTemplates, ", "))
@@ -187,8 +173,6 @@ func Down(op Op) Op {
 	}
 }
 
-// dialectDispatch maps a template Kind to the Dialect method that renders
-// it — the same methods sqlgen.BuildStatement calls for JSON migrations.
 var dialectDispatch = map[string]func(sqlgen.Dialect, any) ([]string, error){
 	"create_table":     func(d sqlgen.Dialect, v any) ([]string, error) { return d.CreateTable(v.(sqlgen.CreateTableOp)) },
 	"drop_table":       func(d sqlgen.Dialect, v any) ([]string, error) { return d.DropTable(v.(sqlgen.DropTableOp)) },
@@ -220,11 +204,6 @@ func joinStatements(stmts []string) string {
 	return strings.Join(stmts, ";\n") + ";"
 }
 
-// RenderSQL renders op and its derived down side as dialect-native SQL,
-// via the same Dialect methods the JSON migration parser calls at
-// migrate-time — so scaffolded SQL is guaranteed valid for the dialect (or
-// fails with the dialect's real "unsupported" error, e.g. SQLite +
-// add_foreign_key) rather than being independently hand-written text.
 func RenderSQL(dialect sqlgen.Dialect, op Op) (string, error) {
 	upStmts, err := renderOne(dialect, op)
 	if err != nil {
@@ -244,10 +223,6 @@ func RenderSQL(dialect sqlgen.Dialect, op Op) (string, error) {
 	return b.String(), nil
 }
 
-// RenderJSON serializes op and its derived down side into the
-// {"up":[...],"down":[...]} envelope JSONParser consumes. No dialect is
-// needed here — dialect resolution for JSON migrations happens later, at
-// migrate-time.
 func RenderJSON(op Op) (string, error) {
 	upRaw, err := marshalOp(op)
 	if err != nil {
@@ -270,10 +245,6 @@ func RenderJSON(op Op) (string, error) {
 	return string(b) + "\n", nil
 }
 
-// RenderYAML serializes op and its derived down side into the same
-// {"up":[...],"down":[...]} envelope as RenderJSON, written as YAML. No
-// dialect is needed here — dialect resolution for YAML migrations happens
-// later, at migrate-time.
 func RenderYAML(op Op) (string, error) {
 	upRaw, err := marshalOp(op)
 	if err != nil {
