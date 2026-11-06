@@ -1,6 +1,3 @@
-// Package yamlconv converts between YAML and JSON byte representations,
-// letting YAML migrations and templates reuse the existing JSON-based
-// sqlgen op machinery unchanged.
 package yamlconv
 
 import (
@@ -13,10 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// YAMLToJSON converts a YAML document to its equivalent JSON bytes. Empty or
-// whitespace-only input converts to JSON "null" without error; callers that
-// require a non-null top-level object should check for that themselves.
-// Multi-document YAML (a second "---" separated document) is rejected.
 func YAMLToJSON(data []byte) ([]byte, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 
@@ -39,7 +32,6 @@ func YAMLToJSON(data []byte) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// JSONToYAML converts JSON bytes to their equivalent YAML representation.
 func JSONToYAML(data []byte) ([]byte, error) {
 	var v interface{}
 	if err := json.Unmarshal(data, &v); err != nil {
